@@ -1144,7 +1144,10 @@ class ViewerActivity : AppCompatActivity() {
         }
         return when (id) {
             // Submenus open in place of the main list; "Back" brings the main list back.
-            R.id.menu_submenu_back -> { toolbar.post { toolbar.showOverflowMenu() }; true }
+            R.id.menu_submenu_back_display,
+            R.id.menu_submenu_back_filters,
+            R.id.menu_submenu_back_reading,
+            R.id.menu_submenu_back_page_tools -> { toolbar.post { toolbar.showOverflowMenu() }; true }
             R.id.menu_tune -> { showReaderSheet(); true }
             R.id.menu_chapters -> { showChapterList(); true }
             R.id.menu_auto_scroll -> { toggleAutoScroll(); true }
