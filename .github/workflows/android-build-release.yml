@@ -1,0 +1,122 @@
+name: Android CI and FOSS Releases
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Test and build APKs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      # The same signing key on every build, kept in repository secrets (see docs/SIGNING.md).
+      # Pull requests from forks cannot read secrets and fall back to Gradle's debug key.
+      - name: Load signing key
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+            echo "Signing with the stable key."
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "::error::Signing secrets are missing. Add KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD (docs/SIGNING.md) before publishing a release."
+            exit 1
+          else
+            echo "::warning::No signing secrets; using Gradle's debug key. This APK will not update one signed with your stable key."
+          fi
+
+      - name: Run unit tests and lint
+        run: ./gradlew --no-daemon testDebugUnitTest lintDebug
+
+      - name: Build debug and release APKs
+        run: ./gradlew --no-daemon assembleDebug assembleRelease
+
+      - name: Show signing certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | grep -i "SHA-256" || true
+
+      - name: Prepare APK artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/ComicReader-debug.apk
+          cp app/build/outputs/apk/release/app-release.apk dist/ComicReader-release.apk
+          sha256sum dist/*.apk > dist/SHA256SUMS.txt
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: comicreader-apks
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish FOSS Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download built APKs
+        uses: actions/download-artifact@v4
+        with:
+          name: comicreader-apks
+          path: dist
+
+      - name: Publish APKs to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/ComicReader-debug.apk
+            dist/ComicReader-release.apk
+            dist/SHA256SUMS.txt
+          body: |
+            ## Comic Reader FOSS Release
+
+            - `ComicReader-release.apk`: optimized release build for direct installation.
+            - `ComicReader-debug.apk`: debuggable development build.
+            - `SHA256SUMS.txt`: SHA-256 checksums for the APKs.
+
+            Both APKs are signed with the project's stable signing key, so each release installs over the previous one. The certificate SHA-256 is printed in the build log.
