@@ -152,6 +152,21 @@
     <string name="menu_group_page">Page actions</string>
     <string name="menu_group_view">View</string>
     <string name="menu_group_tools">Tools</string>
+
+    <string name="menu_nfc">NFC tags…</string>
+    <string name="nfc_write_item">Write to NFC tag</string>
+    <string name="nfc_tag_continue">“Continue reading” tag</string>
+    <string name="nfc_tag_profile">Reading profile tag (current reader settings)</string>
+    <string name="nfc_write_title">Write NFC tag</string>
+    <string name="nfc_write_hold">Hold an NFC tag against the back of your phone to write: %1$s</string>
+    <string name="nfc_written">Tag written</string>
+    <string name="nfc_too_big">Not enough room on this tag (the path is too long)</string>
+    <string name="nfc_read_only">This tag is locked and can’t be written</string>
+    <string name="nfc_failed">Couldn’t write the tag. Hold it still against the phone and try again</string>
+    <string name="nfc_unavailable_or_off">NFC is not available or is switched off</string>
+    <string name="nfc_tag_invalid">Unrecognised tag</string>
+    <string name="nfc_tag_missing">That comic isn’t on this phone</string>
+    <string name="nfc_profile_applied">Reading profile applied</string>
     <string name="resume_progress">Page %1$d of %2$d · %3$d%%</string>
     <string name="resume_page">Resume page</string>
     <string name="first_page">First page</string>

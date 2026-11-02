@@ -18,8 +18,8 @@ android {
         applicationId = "com.infinity.comicreader"
         minSdk = 26
         targetSdk = 34
-        versionCode = 14
-        versionName = "2.3"
+        versionCode = 17
+        versionName = "2.5"
         vectorDrawables { useSupportLibrary = true }
     }
 

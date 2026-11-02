@@ -12,6 +12,12 @@
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
 
+    <!-- NFC tags: tapping one opens a series / profile, and the app can write them. Optional hardware. -->
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-feature
+        android:name="android.hardware.nfc"
+        android:required="false" />
+
     <!--
         allowBackup is off: the app is fully offline and its data (reading history,
         bookmarks, preferences) is device-local, so there is nothing worth syncing to
@@ -50,6 +56,19 @@
                 <data android:mimeType="application/zip" />
                 <data android:mimeType="application/pdf" />
                 <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+
+        <!-- NFC tags written by this app: comicreader://open?p=..., ://continue, ://profile?... -->
+        <activity
+            android:name=".ui.TagLaunchActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="comicreader" />
             </intent-filter>
         </activity>
 

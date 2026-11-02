@@ -2,7 +2,7 @@ name: Android CI and FOSS Releases
 
 on:
   push:
-    branches: [ main, master, v2.3-stable-signing ]
+    branches: [ main, master, v2.3-stable-signing, v2.5-nfc-tags ]
     tags: [ 'v*' ]
   pull_request:
   workflow_dispatch:

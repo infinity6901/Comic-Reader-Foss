@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.os.Build
+import android.nfc.NfcAdapter
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
@@ -40,10 +41,12 @@ import com.infinity.comicreader.data.EntryType
 import com.infinity.comicreader.data.HistoryItem
 import com.infinity.comicreader.data.Library
 import com.infinity.comicreader.data.Prefs
+import com.infinity.comicreader.data.TagLink
 import com.infinity.comicreader.util.AppDispatchers
 import com.infinity.comicreader.util.FileUtils
 import com.infinity.comicreader.util.Formats
 import com.infinity.comicreader.util.NaturalOrder
+import com.infinity.comicreader.util.TagWriter
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -72,6 +75,11 @@ class ListActivity : AppCompatActivity() {
     private var query = ""
     private var resumedOnce = false
     private var deepJob: Job? = null
+    private var tagDialog: AlertDialog? = null
+    private var tagWriter: TagWriter? = null
+
+    /** A tag link that arrived before file access was granted; run once it is. */
+    private var pendingTagLink: String? = null
     private var loadJob: Job? = null
     private var deepResults: List<BookEntry>? = null
     private val allEntries = ArrayList<BookEntry>()
@@ -144,6 +152,12 @@ class ListActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         applyStatusBarSetting()
+        if (hasStorageAccess()) {
+            pendingTagLink?.let {
+                pendingTagLink = null
+                handleTagLink(it)
+            }
+        }
         if (!hasStorageAccess() || mode != TAB_BROWSE) return
         if (!resumedOnce) {
             resumedOnce = true
@@ -153,6 +167,12 @@ class ListActivity : AppCompatActivity() {
         // Refresh so files added/removed outside the app (or from the viewer)
         // appear immediately.
         currentDir?.let { loadDirectory(it) }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Reader mode only works while this screen is in front.
+        tagDialog?.dismiss()
     }
 
     override fun onDestroy() {
@@ -608,6 +628,13 @@ class ListActivity : AppCompatActivity() {
                 }
             }
             add(getString(R.string.menu_open_location)) { openLocation(entry.file) }
+            if (nfcPresent()) {
+                add(getString(R.string.nfc_write_item)) {
+                    // A tag for a file outside shared storage (e.g. a shared-in copy) could never open.
+                    if (isUnderStorage(entry.file)) writeTag(TagLink.openPath(tagPathFor(entry.file)), entry.name)
+                    else toast(R.string.nfc_tag_missing)
+                }
+            }
             add(getString(R.string.menu_set_home)) {
                 prefs.homePath = path
                 toast(R.string.home_set)
@@ -762,10 +789,11 @@ class ListActivity : AppCompatActivity() {
         }
     }
 
-    private fun openViewer(file: File, page: Int) {
+    private fun openViewer(file: File, page: Int, globalLayout: Boolean = false) {
         val intent = Intent(this, ViewerActivity::class.java)
         intent.putExtra(ViewerActivity.EXTRA_PATH, file.absolutePath)
         intent.putExtra(ViewerActivity.EXTRA_PAGE, page)
+        if (globalLayout) intent.putExtra(ViewerActivity.EXTRA_GLOBAL_LAYOUT, true)
         startActivity(intent)
     }
 
@@ -790,7 +818,130 @@ class ListActivity : AppCompatActivity() {
         when (uri.scheme) {
             "file" -> uri.path?.let { handleIncomingFile(File(it)) }
             "content" -> openSharedContent(uri)
+            TagLink.SCHEME -> handleTagLink(intent.dataString)
         }
+    }
+
+    // ------------------------------------------------------------------ NFC tags
+
+    /** A tapped NFC tag (or any comicreader:// link) asked the app to do something. */
+    private fun handleTagLink(link: String?) {
+        // Without file access there is nothing a tag could open; it is replayed once granted.
+        if (!hasStorageAccess()) {
+            pendingTagLink = link
+            return
+        }
+        when (val action = TagLink.parse(link)) {
+            null -> toast(R.string.nfc_tag_invalid)
+            is TagLink.Action.OpenPath -> openTagPath(action.path)
+            is TagLink.Action.Continue -> continueFromHistory(globalLayout = false)
+            is TagLink.Action.Profile -> {
+                applyProfile(action)
+                toast(R.string.nfc_profile_applied)
+                continueFromHistory(globalLayout = true, quiet = true)
+            }
+        }
+    }
+
+    /** The path as stored on a tag: relative to shared storage when possible, so it stays short. */
+    private fun tagPathFor(file: File): String {
+        val root = Environment.getExternalStorageDirectory().absolutePath
+        val path = file.absolutePath
+        return if (path.startsWith("$root/")) path.removePrefix("$root/") else path
+    }
+
+    private fun openTagPath(path: String) {
+        val file = if (path.startsWith("/")) File(path) else File(Environment.getExternalStorageDirectory(), path)
+        // Tags can be written by anyone: only ever open things on shared storage.
+        if (!isUnderStorage(file) || !file.exists()) {
+            toast(R.string.nfc_tag_missing)
+            return
+        }
+        when {
+            file.isDirectory -> openFolderFromTag(file, globalLayout = false)
+            Formats.isOpenable(file.name) ->
+                openViewer(file, if (library.isRead(file.absolutePath)) 0 else -1)
+            else -> toast(R.string.nfc_tag_missing)
+        }
+    }
+
+    /** Continues where the folder left off; when there is nothing to continue, just shows the folder. */
+    private fun openFolderFromTag(dir: File, globalLayout: Boolean) {
+        lifecycleScope.launch {
+            val target = withContext(AppDispatchers.io) { pickContinue(dir) }
+            if (target != null) openViewer(target.first, target.second, globalLayout) else loadDirectory(dir)
+        }
+    }
+
+    private fun continueFromHistory(globalLayout: Boolean, quiet: Boolean = false) {
+        val dir = library.history().firstOrNull()?.let { File(it.path).parentFile }
+        if (dir == null || !dir.isDirectory) {
+            if (!quiet) toast(R.string.continue_none)
+            return
+        }
+        openFolderFromTag(dir, globalLayout)
+    }
+
+    private fun applyProfile(p: TagLink.Action.Profile) {
+        p.mode?.let { prefs.pageMode = it }
+        p.dir?.let { prefs.readingDir = it }
+        p.fit?.let { prefs.fit = it }
+        p.night?.let { prefs.nightFilter = it }
+        p.keepOn?.let { prefs.keepScreenOn = it }
+        p.brightness?.let { prefs.brightness = it }
+    }
+
+    private fun showNfcMenu() {
+        val items = arrayOf(getString(R.string.nfc_tag_continue), getString(R.string.nfc_tag_profile))
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_nfc)
+            .setItems(items) { _, which ->
+                if (which == 0) {
+                    writeTag(TagLink.continueReading(), items[0])
+                } else {
+                    val link = TagLink.profile(
+                        prefs.pageMode, prefs.readingDir, prefs.fit,
+                        prefs.nightFilter, prefs.keepScreenOn, prefs.brightness
+                    )
+                    writeTag(link, items[1])
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    /** Waits for a tag and writes [link] to it. */
+    private fun nfcPresent(): Boolean = NfcAdapter.getDefaultAdapter(this) != null
+
+    private fun writeTag(link: String, what: String) {
+        val writer = TagWriter(this, link) { result ->
+            tagDialog?.dismiss()
+            toast(
+                when (result) {
+                    TagWriter.Result.WRITTEN -> R.string.nfc_written
+                    TagWriter.Result.TOO_BIG -> R.string.nfc_too_big
+                    TagWriter.Result.READ_ONLY -> R.string.nfc_read_only
+                    TagWriter.Result.FAILED -> R.string.nfc_failed
+                }
+            )
+        }
+        if (!writer.start()) {
+            toast(R.string.nfc_unavailable_or_off)
+            // Switched off (as opposed to no NFC at all): take the reader to the switch.
+            if (nfcPresent()) runCatching { startActivity(Intent(Settings.ACTION_NFC_SETTINGS)) }
+            return
+        }
+        tagWriter = writer
+        tagDialog = AlertDialog.Builder(this)
+            .setTitle(R.string.nfc_write_title)
+            .setMessage(getString(R.string.nfc_write_hold, what))
+            .setNegativeButton(R.string.cancel, null)
+            .setOnDismissListener {
+                tagWriter?.stop()
+                tagWriter = null
+                tagDialog = null
+            }
+            .show()
     }
 
     /** Another app handed us a content:// URI: copy it into the cache and open the copy. */
@@ -1111,6 +1262,7 @@ class ListActivity : AppCompatActivity() {
         menu.findItem(R.id.menu_mark_all_read)?.isVisible = browsing
         menu.findItem(R.id.menu_mark_all_unread)?.isVisible = browsing
         menu.findItem(R.id.menu_dupes)?.isVisible = browsing
+        menu.findItem(R.id.menu_nfc)?.isVisible = nfcPresent()
         menu.findItem(R.id.menu_large)?.isVisible = browsing
         menu.findItem(R.id.menu_search_deep)?.apply {
             isVisible = browsing
@@ -1155,6 +1307,7 @@ class ListActivity : AppCompatActivity() {
                 applyFilterAndSort()
             }
             R.id.menu_stats -> showStats()
+            R.id.menu_nfc -> showNfcMenu()
             R.id.menu_share_stats -> shareReadingReport()
             R.id.menu_export_bookmarks -> shareBookmarks()
             R.id.menu_dupes -> openCleanup(CleanupActivity.MODE_DUPES)

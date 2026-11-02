@@ -283,6 +283,33 @@ class PageAdapter(
     }
 
     /**
+     * Lays the pages of [prev] in above the ones already shown, so a strip reader can scroll
+     * backwards from this chapter's first page straight into the previous chapter's last page.
+     * Its pages get negative absolute numbers, so nothing already decoded is renumbered.
+     * The caller must re-anchor the scroll position (items are inserted above the visible
+     * ones). Main thread only.
+     */
+    fun prepend(prev: PageSource): Boolean {
+        if (spread || prev.pageCount <= 0 || released || segments.isEmpty()) return false
+        val first = base - prev.pageCount
+        segments.add(0, Segment(prev, first, prev.pageCount))
+        base = first
+        notifyItemRangeInserted(0, prev.pageCount)
+        return true
+    }
+
+    /** Removes the chapter at the top of the strip (used to trim a chapter read past). */
+    fun dropLeadingChapter() {
+        if (segments.size >= 2) dropTo(segments[1].first)
+    }
+
+    /** Removes the chapter at [index] in the strip and every chapter after it. */
+    fun dropChaptersFrom(index: Int) {
+        if (index < 1 || segments.size <= index) return
+        dropAfter(segments[index].first)
+    }
+
+    /**
      * Forgets every strip item before [absolute] (a chapter that was read past),
      * leaving item 0 to show that page. Keeps the decoded-page cache valid because
      * pages are addressed by their absolute number, not by item index.
@@ -304,12 +331,6 @@ class PageAdapter(
 
     /** [dropTo] for an item index of the strip as currently laid out (0 = first item). */
     fun dropItemsBefore(item: Int) = dropTo(base + item)
-
-    /** Removes every appended chapter, leaving only the first one still in the strip. */
-    fun dropAppended() {
-        if (segments.size < 2) return
-        dropAfter(segments[1].first)
-    }
 
     /**
      * Undoes an append: throws away every chapter starting at [first] (used when
@@ -586,7 +607,9 @@ class PageAdapter(
     }
 
     private fun learnAspect() {
-        val seg = segments.firstOrNull() ?: return
+        // Absolute page 0 is the first page of the chapter the reader opened, which is not
+        // the first segment once a previous chapter has been laid in above it.
+        val seg = segments.firstOrNull { it.first == 0 } ?: return
         // Reading the page size touches the archive, so hold the chapter open
         // while the query is in flight.
         seg.loads.incrementAndGet()
@@ -617,7 +640,8 @@ class PageAdapter(
 
     companion object {
         private const val TAG = "PageAdapter"
-        private const val NO_PAGE = -1
+        // Absolute page numbers go negative once a previous chapter is laid in above.
+        private const val NO_PAGE = Int.MIN_VALUE
         private const val DECODE_THREADS = 2
         private const val MIN_CACHE_BYTES = 24 * 1024 * 1024
         private const val MAX_CACHE_BYTES = 128 * 1024 * 1024

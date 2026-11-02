@@ -96,6 +96,9 @@
                 android:id="@+id/menu_large"
                 android:title="@string/menu_large" />
             <item
+                android:id="@+id/menu_nfc"
+                android:title="@string/menu_nfc" />
+            <item
                 android:id="@+id/menu_stats"
                 android:title="@string/menu_stats" />
             <item

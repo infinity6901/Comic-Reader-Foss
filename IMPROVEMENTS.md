@@ -177,3 +177,19 @@ This update focuses on correctness and memory behavior in the image pipeline, cr
 
 - Swiping backwards from the first page (any reading mode) opens the previous chapter on its last page; in vertical and long-strip modes it sits at the very bottom of that page.
 - Every submenu in the reader's 3-dots menu (Display, Page filter, Reading, Page actions) starts with a "Back" item that returns to the main list.
+
+## v2.3.1
+
+- Fixed the lint `DuplicateIds` error: each submenu's "Back" item now has its own id.
+
+## v2.4
+
+- Vertical and long-strip reading: the previous chapter is now opened ahead and laid in above the current one, so scrolling back from the first page flows straight into the previous chapter's last page with no reload (the same way scrolling forward already worked). Reading forward keeps the chapter just finished laid in above for the same reason.
+- Page numbers of a chapter laid in above are negative internally; the "no page" marker in the page adapter was changed so page -1 is a valid page.
+- Paged mode still reloads when swiping back past the first page (it opens the previous chapter on its last page).
+
+## v2.5 — NFC tags
+
+- Tap an NFC tag (NTAG213 or any NDEF tag) to open a series, continue reading, or apply a reading profile; see docs/NFC.md.
+- Library: long-press a book or folder → "Write to NFC tag". Tools → "NFC tags…" writes a "Continue reading" tag or a reading-profile tag.
+- Tag links are short (`comicreader://…`), validated, and can only open files on shared storage.
