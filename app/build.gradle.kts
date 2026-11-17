@@ -3,16 +3,26 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-// Signing: when CI (or you, locally) provides a keystore through the environment, the
-// release APK is signed with that stable key so every release installs cleanly over the
-// previous one. Debug builds use an isolated ".debug" applicationIdSuffix so a debuggable
-// APK can never cross-grade over a production release installation.
-//   KEYSTORE_FILE (path), KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
-val stableKeystore: File? = System.getenv("KEYSTORE_FILE")?.let { File(it) }?.takeIf { it.isFile }
+// Signing: when CI (or you, locally) provides a keystore through the environment, both
+// the release and debug APKs are signed with that key so every build installs cleanly
+// over the previous one. Supports both ComicReader secrets (KEYSTORE_FILE, KEYSTORE_PASSWORD,
+// KEY_ALIAS, KEY_PASSWORD) and QA workflow secrets ($HOME/work/_temp/keystore/key.jks,
+// SIGNING_STORE_PASSWORD, SIGNING_KEY_ALIAS, SIGNING_KEY_PASSWORD).
+val defaultKeystorePath = System.getProperty("user.home")?.let { "$it/work/_temp/keystore/key.jks" }
+val stableKeystore: File? = (System.getenv("KEYSTORE_FILE")?.takeIf { it.isNotBlank() } ?: defaultKeystorePath)
+    ?.let { File(it) }
+    ?.takeIf { it.isFile && it.length() > 0L }
+val storePwd: String? = System.getenv("KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
+    ?: System.getenv("SIGNING_STORE_PASSWORD")?.takeIf { it.isNotBlank() }
+val aliasName: String? = System.getenv("KEY_ALIAS")?.takeIf { it.isNotBlank() }
+    ?: System.getenv("SIGNING_KEY_ALIAS")?.takeIf { it.isNotBlank() }
+val keyPwd: String? = System.getenv("KEY_PASSWORD")?.takeIf { it.isNotBlank() }
+    ?: System.getenv("SIGNING_KEY_PASSWORD")?.takeIf { it.isNotBlank() }
+
 val hasStableCredentials = stableKeystore != null &&
-    !System.getenv("KEYSTORE_PASSWORD").isNullOrBlank() &&
-    !System.getenv("KEY_ALIAS").isNullOrBlank() &&
-    !System.getenv("KEY_PASSWORD").isNullOrBlank()
+    !storePwd.isNullOrBlank() &&
+    !aliasName.isNullOrBlank() &&
+    !keyPwd.isNullOrBlank()
 
 android {
     namespace = "com.infinity.comicreader"
@@ -31,16 +41,15 @@ android {
         if (hasStableCredentials) {
             create("stable") {
                 storeFile = stableKeystore
-                storePassword = System.getenv("KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("KEY_ALIAS")
-                keyPassword = System.getenv("KEY_PASSWORD")
+                storePassword = storePwd
+                keyAlias = aliasName
+                keyPassword = keyPwd
             }
         }
     }
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
             signingConfigs.findByName("stable")?.let { signingConfig = it }
         }
         release {

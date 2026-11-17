@@ -1,10 +1,6 @@
-name: Android CI and FOSS Releases
+name: Android CI and FOSS Releases (Quick Build)
 
 on:
-  push:
-    branches: [ main, master, v2.3-stable-signing ]
-    tags: [ 'v*' ]
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -34,28 +30,28 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
-      # The same signing key on every build, kept in repository secrets (see docs/SIGNING.md).
-      # Only the temporary keystore path is exported to GITHUB_ENV; passwords stay scoped to
-      # the build step below rather than persisting in GITHUB_ENV for subsequent steps.
       - name: Prepare signing keystore
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          SIGN_KEY: ${{ secrets.SIGN_KEY }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          ALIAS: ${{ secrets.ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
-            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          RAW_KEY="${KEYSTORE_BASE64:-$SIGN_KEY}"
+          RAW_ALIAS="${KEY_ALIAS:-$ALIAS}"
+          RAW_STORE_PWD="${KEYSTORE_PASSWORD:-$KEY_STORE_PASSWORD}"
+          if [ -n "$RAW_KEY" ] && [ -n "$RAW_STORE_PWD" ] && [ -n "$RAW_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo "$RAW_KEY" | base64 -d > "$RUNNER_TEMP/release.jks"
             chmod 600 "$RUNNER_TEMP/release.jks"
             echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
             echo "Signing with the stable key."
-          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            echo "::error::Signing secrets are missing. Add KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD (docs/SIGNING.md) before publishing a release."
-            exit 1
           else
-            echo "::warning::No signing secrets; using Gradle's debug key. This APK will not update one signed with your stable key."
+            echo "::warning::No signing secrets; using Gradle's debug key."
           fi
 
       - name: Run unit tests and lint
@@ -64,7 +60,9 @@ jobs:
       - name: Build debug and release APKs
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          SIGNING_KEY_ALIAS: ${{ secrets.ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew --no-daemon assembleDebug assembleRelease
 
@@ -96,35 +94,3 @@ jobs:
           path: dist/*
           if-no-files-found: error
           retention-days: 30
-
-  publish:
-    name: Publish FOSS Release
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download built APKs
-        uses: actions/download-artifact@v4
-        with:
-          name: comicreader-apks
-          path: dist
-
-      - name: Publish APKs to GitHub Releases
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-          files: |
-            dist/ComicReader-debug.apk
-            dist/ComicReader-release.apk
-            dist/SHA256SUMS.txt
-          body: |
-            ## Comic Reader FOSS Release
-
-            - `ComicReader-release.apk`: optimized release build (`com.infinity.comicreader`) for direct installation.
-            - `ComicReader-debug.apk`: isolated debuggable development build (`com.infinity.comicreader.debug`).
-            - `SHA256SUMS.txt`: SHA-256 checksums for the APKs.
-
-            Signed with the project's stable signing key, so each release installs cleanly over the previous one. The certificate SHA-256 is printed in the build log.
