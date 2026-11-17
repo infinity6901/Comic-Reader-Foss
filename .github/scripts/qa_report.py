@@ -54,6 +54,32 @@ def parse_junit_counts(artifacts_dir):
     return total, failures, errors, skipped
 
 
+def extract_error_excerpt(log_path):
+    try:
+        with open(log_path, "r", encoding="utf-8", errors="replace") as lf:
+            lines = [line.rstrip("\r\n") for line in lf]
+    except OSError:
+        return []
+    key_errors = [
+        line for line in lines
+        if line.startswith("e: ")
+        or line.startswith("FAILURE:")
+        or line.startswith("* What went wrong:")
+        or line.startswith("Execution failed for task")
+        or "Exception:" in line
+        or "Error:" in line
+    ]
+    tail = lines[-25:]
+    combined = []
+    if key_errors:
+        combined.append("# Compiler / Task Error Lines:")
+        combined.extend(key_errors[:40])
+        combined.append("")
+        combined.append("# Log Tail:")
+    combined.extend(tail)
+    return combined
+
+
 def main():
     artifacts_dir = sys.argv[1] if len(sys.argv) > 1 else "artifacts"
     out_dir = sys.argv[2] if len(sys.argv) > 2 else "report-out"
@@ -122,7 +148,6 @@ def main():
             desc = default_desc
         qa_lines.append(f"| {stage} | `{cid}` | **{st}** | {desc} |")
 
-    # Include any extra recorded checks not in ordered_checks
     known_ids = {c[0] for c in ordered_checks}
     for cid, entry in sorted(statuses.items()):
         if cid not in known_ids:
@@ -135,7 +160,10 @@ def main():
         for cid in ("dependencies", "compile", "resources", "manifest", "debug-apk", "unit-tests")
     )
     release_ok = statuses.get("release-apk", {}).get("status") == "PASS"
-    stage2_statuses = [statuses.get(cid, {}).get("status", "NOT_RUN") for cid in ("install", "cold-launch", "lifecycle-cycles", "process-restart", "crash-anr-check")]
+    stage2_statuses = [
+        statuses.get(cid, {}).get("status", "NOT_RUN")
+        for cid in ("install", "cold-launch", "lifecycle-cycles", "process-restart", "crash-anr-check")
+    ]
     if all(s == "PASS" for s in stage2_statuses):
         stage2_gate = "PASS"
     elif any(s == "FAIL" for s in stage2_statuses):
@@ -177,14 +205,11 @@ def main():
                 recursive=True,
             )
             if log_candidates:
-                try:
-                    with open(log_candidates[0], "r", encoding="utf-8", errors="replace") as lf:
-                        tail = lf.readlines()[-40:]
+                excerpt = extract_error_excerpt(log_candidates[0])
+                if excerpt:
                     fail_lines.append("```text")
-                    fail_lines.extend(line.rstrip("\r\n") for line in tail)
+                    fail_lines.extend(excerpt)
                     fail_lines.append("```")
-                except OSError:
-                    pass
             fail_lines.append("")
 
     with open(os.path.join(out_dir, "failure-report.md"), "w", encoding="utf-8") as f:
