@@ -1,3 +1,57 @@
+# ComicReader — v2.4 Overhaul & Audit Fixes (`versionCode = 15`)
+
+## 1. Regressions Introduced in v2.2 / v2.3 Fixed
+- **Backward Overswipe Guard (`ViewerActivity.kt`, `ZoomImageView.kt`)**: Required `prefs.autoNext` on backward overswipe at page 0 and aborted overswipe tracking whenever any visible `ZoomImageView` is zoomed (`scale > 1.02f`) or multi-touch (`pointerCount > 1`) is active.
+- **Reverse Chapter Transition (`LAST_PAGE`) Race & EndCard Fix (`ViewerActivity.kt`)**: Consumed `EXTRA_PAGE = LAST_PAGE` from `intent` immediately (`intent.removeExtra(EXTRA_PAGE)`) so rotation/recreation does not snap back to the end, set `endDismissed = arrivedFromNextChapter` so arriving at the bottom of a previous chapter does not immediately pop up the "Chapter complete" overlay, and deferred `prepareStripAhead()` until `alignStripBottom()` finishes.
+- **Debug vs. Stable Signing Isolation (`app/build.gradle.kts`)**: Restored default debug signing and added `applicationIdSuffix = ".debug"` + `versionNameSuffix = "-debug"` on the `debug` buildType while keeping `signingConfig = signingConfigs.getByName("stable")` on `release`.
+- **GitHub Actions Secret Scoping (`.github/workflows/android-build-release.yml`)**: Scoped `SIGNING_*` credentials to the `Build release APK and AAB` step environment instead of writing plaintext passwords to `$GITHUB_ENV`.
+
+## 2. Reader, UI, Memory & Concurrency Fixes (24 Issues)
+- **Spread Navigation & Solo Cover Page (`SpreadLayout.kt`, `PageAdapter.kt`, `ViewerActivity.kt`)**: Added `coverSolo` support so page 1 displays centered by itself before 2-page pairing begins (`[0], [1,2], [3,4]`), fixed manual spread stepping (`stepPage()`) to advance by full spread items, and hid unused spread half-cells (`View.GONE`) so solo covers and odd final pages center cleanly.
+- **Crop Tool Precision & State Preservation (`CropView.kt`, `CropActivity.kt`, `ViewerActivity.kt`, `activity_crop.xml`)**: Fixed squared density (`density * density` -> `density`), fixed right/bottom handle inversion in `normalize()`, preserved normalized crop rects across `onSizeChanged()`, wrapped `crop_view` and `crop_progress` in a `FrameLayout`, added a Reset button (`crop_reset`), and recycled temporary bitmaps in `startCrop()` and `CropActivity.onDestroy()`.
+- **Unread Start Prompt & Long Strip Seamless Roll (`ViewerActivity.kt`)**: Added `awaitingStartChoice` guard so `askStartPage()` does not mark unread chapters as read before the user chooses, and switched Long Strip seamless roll detection to `findFirstVisibleItemPosition() >= chapterPages()` while keeping `intent` extras updated.
+- **Cover Progress Bar & Badge Layout (`item_book_grid.xml`, `item_book_list.xml`)**: Added `android:clipToOutline="true"` on the cover container so `@id/cover_progress` clips to rounded corners and raised `@id/badge` bottom margin so it never collides with `@id/cover_progress`.
+- **Toolbar Title, Display Cutouts & Volume Keys (`ViewerActivity.kt`, `themes.xml`)**: Re-applied `setChapterTitle()` in `onPostCreate()`, added `WindowInsetsCompat` padding/margins and `shortEdges` cutout mode, mirrored `viewer_seek` in RTL mode, and made `VOLUME_UP` = previous page / `VOLUME_DOWN` = next page by default with an **Invert volume keys** toggle and smooth scrolling in Long Strip mode.
+- **Thread-Safe Archive & PDF PageSources (`ZipSource.kt`, `RarSource.kt`, `SevenZipSource.kt`, `PdfSource.kt`, `BitmapUtils.kt`)**: Added `@Synchronized` and `closed` guards across `loadPage()`, `pageSize()`, `comicInfo()`, and `close()`, switched RAR/7z `pageSize()` to header-only `BitmapUtils.boundsStream()`, and raised the tall-strip pixel budget (`20 MP` up to `8192 px` tall) so webtoon strips stay crisp.
+- **In-Memory Library Cache & Non-Blocking Random Unread (`Library.kt`, `ListActivity.kt`)**: Replaced duplicate raw JSON string caching with typed in-memory collections synchronized under `LOCK`, refreshed all 4 library tabs in `ListActivity.onResume()`, enriched Bookmarks with file size, notes, edit-note, and open-location actions, and moved `openRandomUnread()` to `AppDispatchers.io`.
+- **Manifest, R8 & Localization Completeness (`AndroidManifest.xml`, `proguard-rules.pro`, `res/values-*/strings.xml`)**: Added `READ_MEDIA_IMAGES`, `.cbz`/`.cbr`/`.cb7` MIME & `application/octet-stream` path filters, `-keep class org.tukaani.xz.** { *; }`, stripped all UTF-8 BOMs, and added complete translations for `ko`, `ja`, `zh-rCN`, `ru`, `es`, `pt`, `fr`, and `de`.
+
+## 3. New Features Added in v2.4
+- **Image Folder as Chapter (`FolderImageSource.kt`, `PageSources.kt`, `ListActivity.kt`)**: Treat directories of loose images as readable comic chapters.
+- **Fullscreen Mini HUD (`activity_viewer.xml`, `ViewerActivity.kt`)**: Optional pill overlay showing page progress, battery level, and live 24h clock while Chrome is hidden.
+- **`ComicInfo.xml` Metadata Inspector (`ComicInfo.kt`, `ViewerActivity.kt`)**: Parses embedded `ComicInfo.xml` from `.cbz`, `.cbr`, and `.cb7` archives and displays Title, Series, Number, Credits, Genre, Page Count, and Summary.
+- **Long Strip Whitespace Gap Trimmer (`BitmapUtils.kt`, `PageAdapter.kt`)**: Compresses excessive solid white/black vertical padding (`> 96 px` down to `24 px`) between webtoon panels when Auto-trim borders is enabled in Long Strip mode.
+- **Reader Sleep Timer (`ViewerActivity.kt`)**: Built-in countdown timer (15 / 30 / 45 / 60 / 90 min) with a 1-minute warning snackbar.
+- **Unified Reading Statistics Dialog (`StatsDialog.kt`)**: Consistent 6-row statistics dialog shared between the main toolbar and Settings.
+
+
+# ComicReader — v2.4 Overhaul & Audit Fixes (`versionCode = 15`)
+
+## 1. Regressions Introduced in v2.2 / v2.3 Fixed
+- **Backward Overswipe Guard (`ViewerActivity.kt`, `ZoomImageView.kt`)**: Required `prefs.autoNext` on backward overswipe at page 0 and aborted overswipe tracking whenever any visible `ZoomImageView` is zoomed (`scale > 1.02f`) or multi-touch (`pointerCount > 1`) is active.
+- **Reverse Chapter Transition (`LAST_PAGE`) Race & EndCard Fix (`ViewerActivity.kt`)**: Consumed `EXTRA_PAGE = LAST_PAGE` from `intent` immediately (`intent.removeExtra(EXTRA_PAGE)`) so rotation/recreation does not snap back to the end, set `endDismissed = arrivedFromNextChapter` so arriving at the bottom of a previous chapter does not immediately pop up the "Chapter complete" overlay, and deferred `prepareStripAhead()` until `alignStripBottom()` finishes.
+- **Debug vs. Stable Signing Isolation (`app/build.gradle.kts`)**: Restored default debug signing and added `applicationIdSuffix = ".debug"` + `versionNameSuffix = "-debug"` on the `debug` buildType while keeping `signingConfig = signingConfigs.getByName("stable")` on `release`.
+- **GitHub Actions Secret Scoping (`.github/workflows/android-build-release.yml`)**: Scoped `SIGNING_*` credentials to the `Build release APK and AAB` step environment instead of writing plaintext passwords to `$GITHUB_ENV`.
+
+## 2. Reader, UI, Memory & Concurrency Fixes (24 Issues)
+- **Spread Navigation & Solo Cover Page (`SpreadLayout.kt`, `PageAdapter.kt`, `ViewerActivity.kt`)**: Added `coverSolo` support so page 1 displays centered by itself before 2-page pairing begins (`[0], [1,2], [3,4]`), fixed manual spread stepping (`stepPage()`) to advance by full spread items, and hid unused spread half-cells (`View.GONE`) so solo covers and odd final pages center cleanly.
+- **Crop Tool Precision & State Preservation (`CropView.kt`, `CropActivity.kt`, `ViewerActivity.kt`, `activity_crop.xml`)**: Fixed squared density (`density * density` -> `density`), fixed right/bottom handle inversion in `normalize()`, preserved normalized crop rects across `onSizeChanged()`, wrapped `crop_view` and `crop_progress` in a `FrameLayout`, added a Reset button (`crop_reset`), and recycled temporary bitmaps in `startCrop()` and `CropActivity.onDestroy()`.
+- **Unread Start Prompt & Long Strip Seamless Roll (`ViewerActivity.kt`)**: Added `awaitingStartChoice` guard so `askStartPage()` does not mark unread chapters as read before the user chooses, and switched Long Strip seamless roll detection to `findFirstVisibleItemPosition() >= chapterPages()` while keeping `intent` extras updated.
+- **Cover Progress Bar & Badge Layout (`item_book_grid.xml`, `item_book_list.xml`)**: Added `android:clipToOutline="true"` on the cover container so `@id/cover_progress` clips to rounded corners and raised `@id/badge` bottom margin so it never collides with `@id/cover_progress`.
+- **Toolbar Title, Display Cutouts & Volume Keys (`ViewerActivity.kt`, `themes.xml`)**: Re-applied `setChapterTitle()` in `onPostCreate()`, added `WindowInsetsCompat` padding/margins and `shortEdges` cutout mode, mirrored `viewer_seek` in RTL mode, and made `VOLUME_UP` = previous page / `VOLUME_DOWN` = next page by default with an **Invert volume keys** toggle and smooth scrolling in Long Strip mode.
+- **Thread-Safe Archive & PDF PageSources (`ZipSource.kt`, `RarSource.kt`, `SevenZipSource.kt`, `PdfSource.kt`, `BitmapUtils.kt`)**: Added `@Synchronized` and `closed` guards across `loadPage()`, `pageSize()`, `comicInfo()`, and `close()`, switched RAR/7z `pageSize()` to header-only `BitmapUtils.boundsStream()`, and raised the tall-strip pixel budget (`20 MP` up to `8192 px` tall) so webtoon strips stay crisp.
+- **In-Memory Library Cache & Non-Blocking Random Unread (`Library.kt`, `ListActivity.kt`)**: Replaced duplicate raw JSON string caching with typed in-memory collections synchronized under `LOCK`, refreshed all 4 library tabs in `ListActivity.onResume()`, enriched Bookmarks with file size, notes, edit-note, and open-location actions, and moved `openRandomUnread()` to `AppDispatchers.io`.
+- **Manifest, R8 & Localization Completeness (`AndroidManifest.xml`, `proguard-rules.pro`, `res/values-*/strings.xml`)**: Added `READ_MEDIA_IMAGES`, `.cbz`/`.cbr`/`.cb7` MIME & `application/octet-stream` path filters, `-keep class org.tukaani.xz.** { *; }`, stripped all UTF-8 BOMs, and added complete translations for `ko`, `ja`, `zh-rCN`, `ru`, `es`, `pt`, `fr`, and `de`.
+
+## 3. New Features Added in v2.4
+- **Image Folder as Chapter (`FolderImageSource.kt`, `PageSources.kt`, `ListActivity.kt`)**: Treat directories of loose images as readable comic chapters.
+- **Fullscreen Mini HUD (`activity_viewer.xml`, `ViewerActivity.kt`)**: Optional pill overlay showing page progress, battery level, and live 24h clock while Chrome is hidden.
+- **`ComicInfo.xml` Metadata Inspector (`ComicInfo.kt`, `ViewerActivity.kt`)**: Parses embedded `ComicInfo.xml` from `.cbz`, `.cbr`, and `.cb7` archives and displays Title, Series, Number, Credits, Genre, Page Count, and Summary.
+- **Long Strip Whitespace Gap Trimmer (`BitmapUtils.kt`, `PageAdapter.kt`)**: Compresses excessive solid white/black vertical padding (`> 96 px` down to `24 px`) between webtoon panels when Auto-trim borders is enabled in Long Strip mode.
+- **Reader Sleep Timer (`ViewerActivity.kt`)**: Built-in countdown timer (15 / 30 / 45 / 60 / 90 min) with a 1-minute warning snackbar.
+- **Unified Reading Statistics Dialog (`StatsDialog.kt`)**: Consistent 6-row statistics dialog shared between the main toolbar and Settings.
+
+
 # ComicReader maintenance and overhaul log
 
 ## Overhaul v10 (version 2.0, version code 11)

@@ -1,9 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  The library's overflow menu. Browsing and housekeeping actions stay at the top
-  level; the presentation knobs (sort, columns, hidden files) and the bulk tools
-  live in two submenus so the list never needs a scroll.
--->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
@@ -27,6 +22,11 @@
     <item
         android:id="@+id/menu_random_unread"
         android:title="@string/menu_random_unread"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_storage"
+        android:title="@string/menu_storage"
         app:showAsAction="never" />
 
     <item

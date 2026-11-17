@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Creates the stable signing key used by CI. Keep the resulting file and passwords safe.
 set -euo pipefail
+rm -f comicreader-release.jks
 keytool -genkeypair -v -keystore comicreader-release.jks -alias comicreader \
   -keyalg RSA -keysize 4096 -validity 36500
 echo

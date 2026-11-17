@@ -37,6 +37,11 @@
     <string name="menu_rename">Rename</string>
     <string name="menu_refresh">Refresh</string>
     <string name="menu_new_folder">New folder</string>
+    <string name="menu_storage">Switch storage…</string>
+    <string name="storage_internal">Internal storage</string>
+    <string name="storage_external">External storage %1$d</string>
+    <string name="menu_read_folder">Read folder as chapter</string>
+    <string name="menu_browse_folder">Browse image files</string>
     <string name="menu_show_hidden">Show hidden files</string>
     <string name="menu_hide_hidden">Hide hidden files</string>
     <string name="menu_columns">Grid columns</string>
@@ -131,6 +136,8 @@
     <string name="menu_reading_dir">Reading direction</string>
     <string name="menu_page_mode">Page mode</string>
     <string name="menu_fullscreen">Fullscreen</string>
+    <string name="menu_reader_hud">Show mini HUD in fullscreen</string>
+    <string name="pref_reader_hud_desc">Show a compact page, battery and clock pill when reader bars are hidden</string>
     <string name="menu_jump">Go to page…</string>
     <string name="menu_orientation">Orientation lock</string>
     <string name="menu_next_chapter">Next chapter</string>
@@ -140,9 +147,27 @@
     <string name="menu_page_spacing">Page spacing</string>
     <string name="menu_brightness">Brightness</string>
     <string name="menu_spread">Two-page spread</string>
+    <string name="menu_cover_solo">Solo cover page</string>
+    <string name="pref_cover_solo_desc">Show the first page alone in two-page spread mode so facing pages align</string>
     <string name="menu_crop">Crop page</string>
     <string name="menu_auto_crop">Auto-crop margins</string>
     <string name="menu_chapters">Chapter list…</string>
+    <string name="menu_comic_info">Comic info</string>
+    <string name="info_title">Title</string>
+    <string name="info_series">Series</string>
+    <string name="info_writer">Writer</string>
+    <string name="info_artist">Artist</string>
+    <string name="info_genre">Genre</string>
+    <string name="info_dimensions">Dimensions</string>
+    <string name="info_path">Path</string>
+    <string name="menu_sleep_timer">Sleep timer</string>
+    <string name="sleep_timer_off">Off</string>
+    <string name="sleep_timer_minutes">%1$d minutes</string>
+    <string name="sleep_timer_active">Sleep · %1$d min</string>
+    <string name="sleep_timer_set">Sleep timer set for %1$d minutes</string>
+    <string name="sleep_timer_cancelled">Sleep timer turned off</string>
+    <string name="sleep_timer_one_min">Sleep timer: 1 minute remaining</string>
+    <string name="sleep_timer_expired">Sleep timer finished — progress saved</string>
     <string name="menu_auto_scroll">Auto-scroll</string>
     <string name="menu_auto_next">Auto next chapter</string>
     <string name="menu_auto_speed">Auto-scroll speed…</string>
@@ -245,6 +270,7 @@
     <string name="pref_tap_zones">Enable tap zones</string>
     <string name="pref_tap_zones_desc">Tap the left/right edges to turn pages</string>
     <string name="pref_volume_keys">Use volume keys to turn pages</string>
+    <string name="pref_invert_volume">Invert volume key direction</string>
     <string name="pref_brightness_gesture">Swipe vertically to change brightness</string>
     <string name="pref_double_tap">Double-tap to zoom</string>
     <string name="pref_chop_sensitivity">Chop sensitivity</string>
@@ -264,9 +290,11 @@
     <string name="pref_list_quickfab">Show the list/grid button</string>
 
     <string name="pref_cat_data">Your data</string>
-    <string name="pref_auto_crop_desc">Trim blank borders in paged and vertical modes</string>
+    <string name="pref_auto_crop_desc">Trim blank borders in paged/vertical modes and compress excessive vertical whitespace in long strip</string>
     <string name="pref_per_series">Per-folder layout</string>
     <string name="pref_per_series_desc">Let the reader menu remember mode, direction, fit and spread for a folder</string>
+    <string name="pref_image_folder_book">Open image folders as chapters</string>
+    <string name="pref_image_folder_book_desc">Tapping a folder that contains only loose images opens it directly in the reader as a multi-page chapter</string>
     <string name="pref_preload">Preload pages</string>
     <string name="pref_auto_speed">Auto-scroll speed</string>
     <string name="pref_backup">Export backup</string>
@@ -292,7 +320,7 @@
     <string name="sort_recent">Recently read</string>
 
     <!-- ===================== About ===================== -->
-    <string name="about_desc">A clean, private, ad-free comic &amp; PDF reader. Opens images, ZIP/CBZ, RAR/CBR, 7z/CB7 and PDF — entirely offline.</string>
+    <string name="about_desc">A clean, private, ad-free comic &amp; PDF reader. Opens images, image folders, ZIP/CBZ, RAR/CBR, 7z/CB7 and PDF — entirely offline.</string>
     <string name="about_credits">Archive support by junrar and Apache Commons Compress. PDF rendering via the Android platform PdfRenderer. Icons by Material Symbols.</string>
     <string name="about_tagline">Read without the noise.</string>
     <string name="about_license">Free and open source software, released under the MIT License.</string>
@@ -336,14 +364,14 @@
     <string-array name="locale_entries">
         <item>System default</item>
         <item>English</item>
-        <item>Korean</item>
-        <item>Japanese</item>
-        <item>Chinese (Simplified)</item>
-        <item>Russian</item>
-        <item>Spanish</item>
-        <item>Portuguese</item>
-        <item>French</item>
-        <item>German</item>
+        <item>Korean (한국어)</item>
+        <item>Japanese (日本語)</item>
+        <item>Chinese (简体中文)</item>
+        <item>Russian (Русский)</item>
+        <item>Spanish (Español)</item>
+        <item>Portuguese (Português)</item>
+        <item>French (Français)</item>
+        <item>German (Deutsch)</item>
     </string-array>
     <string-array name="locale_values">
         <item>system</item>
@@ -406,7 +434,6 @@
         <item>stretch</item>
     </string-array>
 
-
     <string-array name="filter_entries">
         <item>@string/str_filter_none</item>
         <item>@string/str_filter_invert</item>
@@ -454,7 +481,3 @@
         <item>6</item>
     </string-array>
 </resources>
-
-
-
-

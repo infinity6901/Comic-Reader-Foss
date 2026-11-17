@@ -1,8 +1,9 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     android:orientation="vertical">
 
     <com.google.android.material.appbar.MaterialToolbar
@@ -12,12 +13,24 @@
         app:navigationIcon="@drawable/ic_back"
         app:title="@string/crop_title" />
 
-    <com.infinity.comicreader.ui.CropView
-        android:id="@+id/crop_view"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="@android:color/black" />
+        android:background="@android:color/black">
+
+        <com.infinity.comicreader.ui.CropView
+            android:id="@+id/crop_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <ProgressBar
+            android:id="@+id/crop_progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -27,10 +40,18 @@
         android:padding="8dp">
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/crop_reset"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/reset_stats" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/crop_rotate"
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
             android:text="@string/crop_rotate" />
 
         <com.google.android.material.button.MaterialButton
@@ -40,12 +61,5 @@
             android:layout_marginStart="8dp"
             android:text="@string/crop_save" />
     </LinearLayout>
-
-    <ProgressBar
-        android:id="@+id/crop_progress"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:visibility="gone" />
 
 </LinearLayout>

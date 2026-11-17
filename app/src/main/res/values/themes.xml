@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <!--
-      Common Material 3 role mapping lives in the Base theme so that the light
-      and night variants only need to override the few config-specific items.
-    -->
     <style name="Theme.ComicReader.Base" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/md_primary</item>
         <item name="colorOnPrimary">@color/md_on_primary</item>
@@ -66,11 +62,12 @@
         <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
     </style>
 
-    <!-- The reader is always dark-on-black, whatever the app theme. -->
+    <!-- The reader is always dark-on-black, whatever the app theme, and extends into display cutouts. -->
     <style name="Theme.ComicReader.Viewer" parent="Theme.ComicReader">
         <item name="android:windowBackground">@color/reader_bg</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="28">shortEdges</item>
     </style>
 
 </resources>

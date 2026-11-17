@@ -7,6 +7,7 @@ import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
+import android.view.ViewConfiguration
 import androidx.appcompat.widget.AppCompatImageView
 import kotlin.math.abs
 
@@ -39,6 +40,14 @@ class ZoomImageView @JvmOverloads constructor(
     var onTap: ((Float) -> Unit)? = null
     var onVerticalDrag: ((Float) -> Unit)? = null
     var doubleTapEnabled = true
+
+    /** True when the image is currently zoomed in beyond its base fit scale. */
+    val isZoomed: Boolean
+        get() = currentScale > minScale * 1.05f
+
+    private var tapDownX = 0f
+    private var tapDownY = 0f
+    private val tapSlop = ViewConfiguration.get(context).scaledTouchSlop
 
     private val scaleDetector = ScaleGestureDetector(
         context,
@@ -83,7 +92,6 @@ class ZoomImageView @JvmOverloads constructor(
                         tapDownX = e.x
                         tapDownY = e.y
                     }
-                    // Only a real tap counts: a quick tap followed by a drag is a pan.
                     MotionEvent.ACTION_UP ->
                         if (abs(e.x - tapDownX) <= tapSlop && abs(e.y - tapDownY) <= tapSlop) dispatchTap(e)
                 }
@@ -95,16 +103,12 @@ class ZoomImageView @JvmOverloads constructor(
                 if (currentScale > minScale * 1.1f) {
                     fit(fitMode)
                 } else {
-                    zoomTo(minScale * 3f, e.x, e.y)
+                    zoomTo(minScale * 2.75f, e.x, e.y)
                 }
                 return true
             }
         }
     )
-
-    private var tapDownX = 0f
-    private var tapDownY = 0f
-    private val tapSlop = android.view.ViewConfiguration.get(context).scaledTouchSlop
 
     private fun dispatchTap(e: MotionEvent) {
         performClick()
@@ -118,7 +122,12 @@ class ZoomImageView @JvmOverloads constructor(
 
     override fun setImageDrawable(drawable: Drawable?) {
         super.setImageDrawable(drawable)
-        post { fit(fitMode) }
+        if (drawable == null) return
+        if (width > 0 && height > 0) {
+            fit(fitMode)
+        } else {
+            post { fit(fitMode) }
+        }
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -146,7 +155,7 @@ class ZoomImageView @JvmOverloads constructor(
             matrix.set(baseMatrix)
             currentScale = 1f
             minScale = 1f
-            maxScale = 1f
+            maxScale = 8f
             imageMatrix = matrix
             return
         }
@@ -160,8 +169,6 @@ class ZoomImageView @JvmOverloads constructor(
         baseMatrix.postScale(scale, scale)
         val scaledW = drawableW * scale
         val scaledH = drawableH * scale
-        // Centre what fits; when a page is taller (or wider) than the view start at its
-        // top (left) edge so reading begins at the beginning and the rest can be panned to.
         val startX = if (scaledW > viewW) 0f else (viewW - scaledW) / 2f
         val startY = if (scaledH > viewH) 0f else (viewH - scaledH) / 2f
         baseMatrix.postTranslate(startX, startY)
@@ -216,7 +223,6 @@ class ZoomImageView @JvmOverloads constructor(
         return true
     }
 
-    /** How far the content may still move in the drag direction (dx, dy), per axis. */
     private fun roomX(dx: Float): Boolean {
         val d = drawable ?: return false
         matrix.getValues(values)
@@ -235,7 +241,6 @@ class ZoomImageView @JvmOverloads constructor(
         return if (dy > 0) ty < -EDGE_SLOP else ty > height - contentH + EDGE_SLOP
     }
 
-    /** True when the content is larger than the view in either direction. */
     private fun canPan(): Boolean {
         val d = drawable ?: return false
         matrix.getValues(values)
@@ -251,13 +256,10 @@ class ZoomImageView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 lastX = event.x
                 lastY = event.y
-                // Until we know the drag direction, let a pannable page keep the gesture.
                 parent?.requestDisallowInterceptTouchEvent(canPan())
             }
             MotionEvent.ACTION_MOVE -> handleMove(event)
             MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_POINTER_UP -> {
-                // Reset the pan anchor when the active pointer set changes. Without this,
-                // lifting one finger after a pinch makes the remaining finger jump.
                 val index = if (event.actionMasked == MotionEvent.ACTION_POINTER_UP && event.actionIndex == 0 && event.pointerCount > 1) 1 else 0
                 if (index < event.pointerCount) {
                     lastX = event.getX(index)
@@ -278,8 +280,6 @@ class ZoomImageView @JvmOverloads constructor(
             val dx = event.x - lastX
             val dy = event.y - lastY
             if (canPan()) {
-                // Pan while there is room in the dominant direction; at an edge hand the
-                // gesture back so the pager / list can move to the next page.
                 val horizontal = abs(dx) >= abs(dy)
                 val room = if (horizontal) roomX(dx) else roomY(dy)
                 parent?.requestDisallowInterceptTouchEvent(room)

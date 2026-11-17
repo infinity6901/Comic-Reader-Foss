@@ -1,9 +1,9 @@
 package com.infinity.comicreader.ui
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
@@ -34,7 +34,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
             if (uri == null) return@registerForActivityResult
             val text = runCatching { readCapped(uri) }.getOrNull()
             if (text != null && Backup.import(requireContext(), text)) {
-                // Theme and language come from the restored settings.
                 val restored = Prefs(requireContext())
                 AppCompatDelegate.setDefaultNightMode(restored.nightMode)
                 Locales.apply(restored.localeTag)
@@ -69,8 +68,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
         val library = Library(requireContext())
 
         findPreference<Preference>("pref_dynamic_color")?.setOnPreferenceChangeListener { _, _ ->
-            // The Application's DynamicColors precondition reads the saved preference
-            // when the recreated Activity is attached.
             activity?.window?.decorView?.postDelayed({ activity?.recreate() }, 120)
             true
         }
@@ -108,20 +105,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
 
         findPreference<Preference>("pref_stats")?.setOnPreferenceClickListener {
-            val st = library.stats()
-            AlertDialog.Builder(requireContext())
-                .setTitle(R.string.menu_stats)
-                .setMessage(
-                    getString(
-                        R.string.stats_body, st.chapters, st.pages, st.seconds / 3600,
-                        (st.seconds % 3600) / 60, st.daysRead, st.streak, st.bestStreak
-                    ) + "\n\n" + getString(R.string.weekly_activity_title) + "\n" +
-                        library.dailyActivity(7).joinToString("\n") { day ->
-                            getString(R.string.weekly_activity_line, day.date, day.pages, day.seconds / 60)
-                        }
-                )
-                .setPositiveButton(R.string.ok, null)
-                .show()
+            StatsDialog.show(requireContext(), library)
             true
         }
 

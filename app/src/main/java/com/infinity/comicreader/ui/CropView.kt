@@ -15,6 +15,9 @@ import android.view.View
 /**
  * Displays a bitmap fitted to the view and lets the user drag a crop rectangle
  * over it. Corners resize; the inside of the rectangle moves it.
+ *
+ * Normalized crop coordinates `[0..1]` are preserved across layout/size changes
+ * so toggling system bars or resizing the window does not wipe the selection.
  */
 class CropView @JvmOverloads constructor(
     context: Context,
@@ -26,17 +29,20 @@ class CropView @JvmOverloads constructor(
     private val imageMatrix = Matrix()
     private val displayRect = RectF()
     private val cropRect = RectF()
+    private val normCrop = RectF(0.1f, 0.1f, 0.9f, 0.9f)
+    private var hasSelection = false
 
     private var activeHandle = HANDLE_NONE
     private var lastX = 0f
     private var lastY = 0f
 
+    private val density = resources.displayMetrics.density
     private val bitmapPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
     private val dimPaint = Paint().apply { color = 0x99000000.toInt() }
     private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         style = Paint.Style.STROKE
-        strokeWidth = 4f
+        strokeWidth = 2f * density
     }
     private val handlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -45,17 +51,26 @@ class CropView @JvmOverloads constructor(
 
     fun setBitmap(value: Bitmap) {
         bitmap = value
-        requestLayout()
-        post {
+        hasSelection = false
+        normCrop.set(0.1f, 0.1f, 0.9f, 0.9f)
+        if (width > 0 && height > 0) {
             computeMatrix()
-            resetCrop()
+            applyNormalizedCrop()
+        } else {
+            requestLayout()
         }
+    }
+
+    fun resetSelection() {
+        normCrop.set(0.1f, 0.1f, 0.9f, 0.9f)
+        hasSelection = true
+        applyNormalizedCrop()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         computeMatrix()
-        resetCrop()
+        applyNormalizedCrop()
     }
 
     private fun computeMatrix() {
@@ -76,17 +91,33 @@ class CropView @JvmOverloads constructor(
         imageMatrix.postTranslate(dx, dy)
     }
 
-    private fun resetCrop() {
+    private fun applyNormalizedCrop() {
         if (displayRect.isEmpty) return
-        val insetX = displayRect.width() * 0.1f
-        val insetY = displayRect.height() * 0.1f
+        if (!hasSelection) {
+            normCrop.set(0.1f, 0.1f, 0.9f, 0.9f)
+            hasSelection = true
+        }
+        val dw = displayRect.width()
+        val dh = displayRect.height()
         cropRect.set(
-            displayRect.left + insetX,
-            displayRect.top + insetY,
-            displayRect.right - insetX,
-            displayRect.bottom - insetY
+            displayRect.left + normCrop.left * dw,
+            displayRect.top + normCrop.top * dh,
+            displayRect.left + normCrop.right * dw,
+            displayRect.top + normCrop.bottom * dh
         )
         invalidate()
+    }
+
+    private fun saveNormalizedCrop() {
+        val dw = displayRect.width()
+        val dh = displayRect.height()
+        if (dw <= 0f || dh <= 0f) return
+        normCrop.set(
+            ((cropRect.left - displayRect.left) / dw).coerceIn(0f, 1f),
+            ((cropRect.top - displayRect.top) / dh).coerceIn(0f, 1f),
+            ((cropRect.right - displayRect.left) / dw).coerceIn(0f, 1f),
+            ((cropRect.bottom - displayRect.top) / dh).coerceIn(0f, 1f)
+        )
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -102,7 +133,7 @@ class CropView @JvmOverloads constructor(
 
         canvas.drawRect(cropRect, borderPaint)
 
-        val r = 14f * resources.displayMetrics.density * resources.displayMetrics.density
+        val r = 10f * density
         canvas.drawCircle(cropRect.left, cropRect.top, r, handlePaint)
         canvas.drawCircle(cropRect.right, cropRect.top, r, handlePaint)
         canvas.drawCircle(cropRect.left, cropRect.bottom, r, handlePaint)
@@ -139,6 +170,7 @@ class CropView @JvmOverloads constructor(
                     }
                 }
                 normalize()
+                saveNormalizedCrop()
                 lastX = x
                 lastY = y
                 invalidate()
@@ -153,7 +185,7 @@ class CropView @JvmOverloads constructor(
     }
 
     private fun hitTest(x: Float, y: Float): Int {
-        val r = 44f * resources.displayMetrics.density * resources.displayMetrics.density
+        val r = 32f * density
         if (near(x, y, cropRect.left, cropRect.top, r)) return HANDLE_TL
         if (near(x, y, cropRect.right, cropRect.top, r)) return HANDLE_TR
         if (near(x, y, cropRect.left, cropRect.bottom, r)) return HANDLE_BL
@@ -169,19 +201,44 @@ class CropView @JvmOverloads constructor(
     }
 
     private fun moveCrop(dx: Float, dy: Float) {
-        if (cropRect.left + dx < displayRect.left || cropRect.right + dx > displayRect.right) return
-        if (cropRect.top + dy < displayRect.top || cropRect.bottom + dy > displayRect.bottom) return
-        cropRect.offset(dx, dy)
+        val clampedDx = dx.coerceIn(displayRect.left - cropRect.left, displayRect.right - cropRect.right)
+        val clampedDy = dy.coerceIn(displayRect.top - cropRect.top, displayRect.bottom - cropRect.bottom)
+        cropRect.offset(clampedDx, clampedDy)
     }
 
     private fun normalize() {
-        val minSize = 48f * resources.displayMetrics.density * resources.displayMetrics.density
-        if (cropRect.left > cropRect.right - minSize) cropRect.left = cropRect.right - minSize
-        if (cropRect.top > cropRect.bottom - minSize) cropRect.top = cropRect.bottom - minSize
-        if (cropRect.left < displayRect.left) cropRect.left = displayRect.left
-        if (cropRect.top < displayRect.top) cropRect.top = displayRect.top
-        if (cropRect.right > displayRect.right) cropRect.right = displayRect.right
-        if (cropRect.bottom > displayRect.bottom) cropRect.bottom = displayRect.bottom
+        val minW = minOf(48f * density, displayRect.width().coerceAtLeast(1f))
+        val minH = minOf(48f * density, displayRect.height().coerceAtLeast(1f))
+
+        cropRect.left = cropRect.left.coerceIn(displayRect.left, displayRect.right)
+        cropRect.right = cropRect.right.coerceIn(displayRect.left, displayRect.right)
+        cropRect.top = cropRect.top.coerceIn(displayRect.top, displayRect.bottom)
+        cropRect.bottom = cropRect.bottom.coerceIn(displayRect.top, displayRect.bottom)
+
+        when (activeHandle) {
+            HANDLE_TL, HANDLE_BL -> {
+                if (cropRect.left > cropRect.right - minW) {
+                    cropRect.left = (cropRect.right - minW).coerceAtLeast(displayRect.left)
+                }
+            }
+            HANDLE_TR, HANDLE_BR -> {
+                if (cropRect.right < cropRect.left + minW) {
+                    cropRect.right = (cropRect.left + minW).coerceAtMost(displayRect.right)
+                }
+            }
+        }
+        when (activeHandle) {
+            HANDLE_TL, HANDLE_TR -> {
+                if (cropRect.top > cropRect.bottom - minH) {
+                    cropRect.top = (cropRect.bottom - minH).coerceAtLeast(displayRect.top)
+                }
+            }
+            HANDLE_BL, HANDLE_BR -> {
+                if (cropRect.bottom < cropRect.top + minH) {
+                    cropRect.bottom = (cropRect.top + minH).coerceAtMost(displayRect.bottom)
+                }
+            }
+        }
     }
 
     /** The current crop rectangle expressed in source-bitmap pixel coordinates. */

@@ -6,6 +6,7 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import java.io.File
+import java.io.IOException
 
 /** Renders PDF pages with the platform [PdfRenderer]. */
 class PdfSource(file: File) : PageSource {
@@ -19,7 +20,8 @@ class PdfSource(file: File) : PageSource {
         throw t
     }
 
-    override val pageCount: Int get() = renderer.pageCount
+    private var closed = false
+    override val pageCount: Int = renderer.pageCount
 
     /**
      * [PdfRenderer] allows only one open [PdfRenderer.Page] at a time and is not
@@ -28,13 +30,12 @@ class PdfSource(file: File) : PageSource {
      */
     @Synchronized
     override fun loadPage(index: Int, reqWidth: Int, reqHeight: Int): Bitmap {
-        if (index !in 0 until renderer.pageCount) throw java.io.IOException("Page index out of range: $index")
+        if (closed) throw IOException("PDF source is closed")
+        if (index !in 0 until pageCount) throw IOException("Page index out of range: $index")
         try {
             val page = renderer.openPage(index)
             try {
                 val ratio = if (page.width > 0) page.height.toFloat() / page.width.toFloat() else 1.4f
-                // Callers pass 1 for the dimension they do not constrain, so derive the
-                // width from whichever limits are real (fit-height requests only set the height).
                 val fromWidth = if (reqWidth > 1) reqWidth else 0
                 val fromHeight = if (reqHeight > 1) (reqHeight / ratio).toInt() else 0
                 val wanted = when {
@@ -43,8 +44,6 @@ class PdfSource(file: File) : PageSource {
                     fromHeight > 0 -> fromHeight
                     else -> page.width * 2
                 }
-                // Respect thumbnail-sized requests too. A 360px minimum made every PDF
-                // thumbnail decode larger than requested, wasting CPU and bitmap memory.
                 var w = wanted.coerceIn(1, MAX_WIDTH)
                 var h = (w * ratio).toInt().coerceIn(1, MAX_HEIGHT)
                 // A tall page at full width could still be ~96 MB; keep the bitmap bounded.
@@ -59,8 +58,6 @@ class PdfSource(file: File) : PageSource {
                     page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                     return bitmap
                 } catch (t: Throwable) {
-                    // Rendering can fail for damaged PDFs or interrupted native work.
-                    // Do not leak the native pixel buffer when no caller receives it.
                     if (!bitmap.isRecycled) bitmap.recycle()
                     throw t
                 }
@@ -75,7 +72,7 @@ class PdfSource(file: File) : PageSource {
 
     @Synchronized
     override fun pageSize(index: Int): IntArray? {
-        if (index < 0 || index >= renderer.pageCount) return null
+        if (closed || index < 0 || index >= pageCount) return null
         return runCatching {
             val page = renderer.openPage(index)
             try {
@@ -86,7 +83,10 @@ class PdfSource(file: File) : PageSource {
         }.getOrNull()
     }
 
+    @Synchronized
     override fun close() {
+        if (closed) return
+        closed = true
         runCatching { renderer.close() }
         runCatching { pfd.close() }
     }

@@ -35,8 +35,9 @@ jobs:
         run: chmod +x gradlew
 
       # The same signing key on every build, kept in repository secrets (see docs/SIGNING.md).
-      # Pull requests from forks cannot read secrets and fall back to Gradle's debug key.
-      - name: Load signing key
+      # Only the temporary keystore path is exported to GITHUB_ENV; passwords stay scoped to
+      # the build step below rather than persisting in GITHUB_ENV for subsequent steps.
+      - name: Prepare signing keystore
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -47,10 +48,8 @@ jobs:
           set -euo pipefail
           if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            chmod 600 "$RUNNER_TEMP/release.jks"
             echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
-            echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
-            echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
-            echo "KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
             echo "Signing with the stable key."
           elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             echo "::error::Signing secrets are missing. Add KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD (docs/SIGNING.md) before publishing a release."
@@ -63,7 +62,16 @@ jobs:
         run: ./gradlew --no-daemon testDebugUnitTest lintDebug
 
       - name: Build debug and release APKs
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew --no-daemon assembleDebug assembleRelease
+
+      - name: Clean up temporary keystore
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/release.jks"
 
       - name: Show signing certificate
         shell: bash
@@ -115,8 +123,8 @@ jobs:
           body: |
             ## Comic Reader FOSS Release
 
-            - `ComicReader-release.apk`: optimized release build for direct installation.
-            - `ComicReader-debug.apk`: debuggable development build.
+            - `ComicReader-release.apk`: optimized release build (`com.infinity.comicreader`) for direct installation.
+            - `ComicReader-debug.apk`: isolated debuggable development build (`com.infinity.comicreader.debug`).
             - `SHA256SUMS.txt`: SHA-256 checksums for the APKs.
 
-            Both APKs are signed with the project's stable signing key, so each release installs over the previous one. The certificate SHA-256 is printed in the build log.
+            Signed with the project's stable signing key, so each release installs cleanly over the previous one. The certificate SHA-256 is printed in the build log.

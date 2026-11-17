@@ -3,3 +3,4 @@
 -dontwarn org.tukaani.xz.**
 -keep class com.github.junrar.** { *; }
 -keep class org.apache.commons.compress.** { *; }
+-keep class org.tukaani.xz.** { *; }

@@ -19,7 +19,8 @@
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="@dimen/grid_thumb_h"
-            android:background="@drawable/bg_cover_placeholder">
+            android:background="@drawable/bg_cover_placeholder"
+            android:clipToOutline="true">
 
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/thumb"
@@ -42,7 +43,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom|start"
-                android:layout_margin="6dp"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:layout_marginBottom="8dp"
                 android:paddingHorizontal="6dp"
                 android:paddingVertical="1dp"
                 android:textColor="@android:color/white"
@@ -96,8 +99,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="4dp"
-            android:maxLines="1"
             android:ellipsize="end"
+            android:maxLines="1"
             android:textAppearance="@style/TextAppearance.ComicReader.ItemSubtitle"
             android:textSize="11.5sp"
             tools:text="42.1 MB · 24 pages" />

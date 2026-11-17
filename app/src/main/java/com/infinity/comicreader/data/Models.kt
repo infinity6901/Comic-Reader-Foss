@@ -50,7 +50,8 @@ data class SeriesSettings(
     val mode: String,
     val dir: String,
     val fit: String,
-    val twoPage: Boolean
+    val twoPage: Boolean,
+    val coverSolo: Boolean = false
 )
 
 /** A single calendar day of reading activity. */

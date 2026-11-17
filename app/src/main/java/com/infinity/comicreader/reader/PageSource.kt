@@ -1,6 +1,7 @@
 package com.infinity.comicreader.reader
 
 import android.graphics.Bitmap
+import com.infinity.comicreader.util.ComicInfo
 import java.io.Closeable
 
 /** A random-access sequence of pages that can each be rendered to a [Bitmap]. */
@@ -19,4 +20,7 @@ interface PageSource : Closeable {
      * strips so pages do not resize as they load.
      */
     fun pageSize(index: Int): IntArray? = null
+
+    /** Optional `ComicInfo.xml` metadata parsed from the archive, if present. */
+    fun comicInfo(): ComicInfo? = null
 }

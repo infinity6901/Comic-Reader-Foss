@@ -56,6 +56,11 @@
             app:key="pref_fullscreen"
             app:title="@string/pref_fullscreen" />
         <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="pref_reader_hud"
+            app:summary="@string/pref_reader_hud_desc"
+            app:title="@string/menu_reader_hud" />
+        <SwitchPreferenceCompat
             app:defaultValue="false"
             app:key="pref_keep_screen_on"
             app:title="@string/pref_keep_on" />
@@ -120,6 +125,12 @@
             app:key="pref_two_page"
             app:title="@string/pref_two_page" />
         <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:dependency="pref_two_page"
+            app:key="pref_cover_solo"
+            app:summary="@string/pref_cover_solo_desc"
+            app:title="@string/menu_cover_solo" />
+        <SwitchPreferenceCompat
             app:defaultValue="false"
             app:key="pref_auto_crop"
             app:summary="@string/pref_auto_crop_desc"
@@ -129,6 +140,11 @@
             app:key="pref_per_series"
             app:summary="@string/pref_per_series_desc"
             app:title="@string/pref_per_series" />
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="pref_image_folder_book"
+            app:summary="@string/pref_image_folder_book_desc"
+            app:title="@string/pref_image_folder_book" />
         <ListPreference
             app:defaultValue="2"
             app:entries="@array/preload_entries"
@@ -155,6 +171,11 @@
             app:defaultValue="false"
             app:key="pref_volume_keys"
             app:title="@string/pref_volume_keys" />
+        <SwitchPreferenceCompat
+            app:defaultValue="false"
+            app:dependency="pref_volume_keys"
+            app:key="pref_invert_volume"
+            app:title="@string/pref_invert_volume" />
         <SwitchPreferenceCompat
             app:defaultValue="true"
             app:key="pref_brightness_gesture"

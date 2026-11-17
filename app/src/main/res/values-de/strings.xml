@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings">Einstellungen</string>
+    <string name="tab_browse">Durchsuchen</string>
+    <string name="tab_favorites">Favoriten</string>
+    <string name="tab_history">Verlauf</string>
+    <string name="tab_bookmarks">Lesezeichen</string>
+    <string name="menu_favorites">Favoriten</string>
+    <string name="menu_history">Verlauf</string>
+    <string name="menu_bookmarks">Lesezeichen</string>
+    <string name="menu_search">Suchen</string>
+    <string name="menu_sort">Sortieren</string>
+    <string name="menu_grid">Rasteransicht</string>
+    <string name="menu_list_view">Listenansicht</string>
+    <string name="menu_settings">Einstellungen</string>
+    <string name="menu_about">Über</string>
+    <string name="menu_exit">Beenden</string>
+    <string name="menu_continue">Weiterlesen</string>
+    <string name="menu_random_unread">Zufälliger ungelesener Comic</string>
+    <string name="menu_storage">Speicher wechseln…</string>
+    <string name="menu_read_folder">Ordner als Kapitel lesen</string>
+    <string name="menu_reader_settings">Leser-Einstellungen</string>
+    <string name="menu_page_mode">Seitenmodus</string>
+    <string name="page_mode_paged">Seitenweise</string>
+    <string name="page_mode_vertical">Vertikal</string>
+    <string name="page_mode_longstrip">Langstreifen (Webtoon)</string>
+    <string name="menu_fit">Anpassung</string>
+    <string name="menu_fit_screen">An Bildschirm anpassen</string>
+    <string name="menu_fit_width">An Breite anpassen</string>
+    <string name="menu_fit_height">An Höhe anpassen</string>
+    <string name="menu_fit_stretch">Strecken</string>
+    <string name="menu_reading_dir">Leserichtung</string>
+    <string name="reading_ltr">Links nach rechts</string>
+    <string name="reading_rtl">Rechts nach links</string>
+    <string name="menu_two_page">Doppelseite</string>
+    <string name="menu_cover_solo">Cover einzeln anzeigen</string>
+    <string name="menu_auto_crop">Ränder automatisch zuschneiden</string>
+    <string name="menu_comic_info">Comic-Info</string>
+    <string name="menu_sleep_timer">Schlummerfunktion</string>
+    <string name="menu_reader_hud">Mini-HUD im Vollbild anzeigen</string>
+    <string name="read_badge">Gelesen</string>
+    <string name="recent">Zuletzt</string>
+</resources>

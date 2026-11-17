@@ -1,11 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  The reader's overflow menu. Everything a reader reaches constantly — moving
-  between pages and chapters, bookmarks and the two auto modes — sits at the top
-  level, so nothing important needs a scroll. The settings that also live in the
-  reader sheet (Display / Page filter / Reading / Page actions) are grouped into
-  submenus so the top-level list stays short.
--->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
@@ -42,6 +35,11 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/menu_comic_info"
+        android:title="@string/menu_comic_info"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/menu_prev_chapter"
         android:title="@string/menu_prev_chapter"
         app:showAsAction="never" />
@@ -61,6 +59,11 @@
         android:id="@+id/menu_auto_next"
         android:checkable="true"
         android:title="@string/menu_auto_next"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_sleep_timer"
+        android:title="@string/menu_sleep_timer"
         app:showAsAction="never" />
 
     <item
@@ -157,6 +160,10 @@
                 android:checkable="true"
                 android:title="@string/menu_two_page" />
             <item
+                android:id="@+id/menu_cover_solo"
+                android:checkable="true"
+                android:title="@string/menu_cover_solo" />
+            <item
                 android:id="@+id/menu_auto_crop"
                 android:checkable="true"
                 android:title="@string/menu_auto_crop" />
@@ -172,6 +179,10 @@
                 android:id="@+id/menu_fullscreen"
                 android:checkable="true"
                 android:title="@string/menu_fullscreen" />
+            <item
+                android:id="@+id/menu_reader_hud"
+                android:checkable="true"
+                android:title="@string/menu_reader_hud" />
             <item
                 android:id="@+id/menu_series"
                 android:checkable="true"

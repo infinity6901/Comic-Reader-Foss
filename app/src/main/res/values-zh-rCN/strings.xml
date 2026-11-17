@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings">设置</string>
+    <string name="tab_browse">浏览</string>
+    <string name="tab_favorites">收藏</string>
+    <string name="tab_history">历史</string>
+    <string name="tab_bookmarks">书签</string>
+    <string name="menu_favorites">收藏</string>
+    <string name="menu_history">阅读历史</string>
+    <string name="menu_bookmarks">书签</string>
+    <string name="menu_search">搜索</string>
+    <string name="menu_sort">排序</string>
+    <string name="menu_grid">网格视图</string>
+    <string name="menu_list_view">列表视图</string>
+    <string name="menu_settings">设置</string>
+    <string name="menu_about">关于</string>
+    <string name="menu_exit">退出</string>
+    <string name="menu_continue">继续阅读</string>
+    <string name="menu_random_unread">随机打开未读漫画</string>
+    <string name="menu_storage">切换存储…</string>
+    <string name="menu_read_folder">将文件夹作为章节阅读</string>
+    <string name="menu_reader_settings">阅读器设置</string>
+    <string name="menu_page_mode">翻页模式</string>
+    <string name="page_mode_paged">分页</string>
+    <string name="page_mode_vertical">纵向翻页</string>
+    <string name="page_mode_longstrip">长条 (条漫)</string>
+    <string name="menu_fit">适应模式</string>
+    <string name="menu_fit_screen">适应屏幕</string>
+    <string name="menu_fit_width">适应宽度</string>
+    <string name="menu_fit_height">适应高度</string>
+    <string name="menu_fit_stretch">拉伸</string>
+    <string name="menu_reading_dir">阅读方向</string>
+    <string name="reading_ltr">从左到右</string>
+    <string name="reading_rtl">从右到左</string>
+    <string name="menu_two_page">双页拼合</string>
+    <string name="menu_cover_solo">封面单独显示</string>
+    <string name="menu_auto_crop">自动裁切白边</string>
+    <string name="menu_comic_info">漫画信息</string>
+    <string name="menu_sleep_timer">睡眠定时器</string>
+    <string name="menu_reader_hud">全屏显示迷你状态栏</string>
+    <string name="read_badge">已读</string>
+    <string name="recent">最近</string>
+</resources>

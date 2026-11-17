@@ -237,3 +237,14 @@ The current maintenance update improves bitmap lifetime management during auto-c
 ## Automated Android builds
 
 GitHub Actions builds the debug and optimized release APKs, runs unit tests and lint, and uploads APK artifacts. Pushing a tag beginning with `v` (for example, `v2.2.0`) also publishes those APKs to a GitHub Release. See [docs/CI_RELEASES.md](docs/CI_RELEASES.md) for instructions and signing limitations. CI signs debug and release APKs with a stable key from repository secrets; see [docs/SIGNING.md](docs/SIGNING.md).
+
+
+## What's New in v2.4
+- **Solo Cover Page** in Dual-Page Spread mode (`coverSolo`)
+- **Fullscreen Mini HUD** (page indicator, battery %, and clock when toolbars are hidden)
+- **Image Folder as Book/Chapter** (`FolderImageSource`)
+- **`ComicInfo.xml` Metadata Dialog** for `.cbz`, `.cbr`, and `.cb7` archives
+- **Long Strip Vertical Gap Compression** when Auto-trim is enabled
+- **Reader Sleep Timer** & **Invert Volume Keys** setting
+- **Complete 8-Language Localization** (`ko`, `ja`, `zh-CN`, `ru`, `es`, `pt`, `fr`, `de`)
+- **All 28 v2.4 Audit Fixes** across concurrency, memory, crop tool, spread stepping, and CI signing security

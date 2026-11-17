@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings">Paramètres</string>
+    <string name="tab_browse">Parcourir</string>
+    <string name="tab_favorites">Favoris</string>
+    <string name="tab_history">Historique</string>
+    <string name="tab_bookmarks">Signets</string>
+    <string name="menu_favorites">Favoris</string>
+    <string name="menu_history">Historique</string>
+    <string name="menu_bookmarks">Signets</string>
+    <string name="menu_search">Rechercher</string>
+    <string name="menu_sort">Trier</string>
+    <string name="menu_grid">Grille</string>
+    <string name="menu_list_view">Liste</string>
+    <string name="menu_settings">Paramètres</string>
+    <string name="menu_about">À propos</string>
+    <string name="menu_exit">Quitter</string>
+    <string name="menu_continue">Continuer la lecture</string>
+    <string name="menu_random_unread">BD non lue au hasard</string>
+    <string name="menu_storage">Changer de stockage…</string>
+    <string name="menu_read_folder">Lire le dossier comme chapitre</string>
+    <string name="menu_reader_settings">Options du lecteur</string>
+    <string name="menu_page_mode">Mode de page</string>
+    <string name="page_mode_paged">Paginé</string>
+    <string name="page_mode_vertical">Vertical</string>
+    <string name="page_mode_longstrip">Bande continue</string>
+    <string name="menu_fit">Ajustement</string>
+    <string name="menu_fit_screen">Ajuster à l’écran</string>
+    <string name="menu_fit_width">Ajuster à la largeur</string>
+    <string name="menu_fit_height">Ajuster à la hauteur</string>
+    <string name="menu_fit_stretch">Étirer</string>
+    <string name="menu_reading_dir">Sens de lecture</string>
+    <string name="reading_ltr">Gauche à droite</string>
+    <string name="reading_rtl">Droite à gauche</string>
+    <string name="menu_two_page">Double page</string>
+    <string name="menu_cover_solo">Couverture seule</string>
+    <string name="menu_auto_crop">Rogner les marges</string>
+    <string name="menu_comic_info">Infos BD</string>
+    <string name="menu_sleep_timer">Minuterie de veille</string>
+    <string name="menu_reader_hud">Mini barre d’état en plein écran</string>
+    <string name="read_badge">Lu</string>
+    <string name="recent">Récent</string>
+</resources>

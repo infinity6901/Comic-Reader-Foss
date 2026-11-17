@@ -11,19 +11,28 @@ import java.time.format.DateTimeFormatter
  * Favorites, read marks, reading history, bookmarks, per-series settings and
  * reading statistics, persisted as JSON documents in SharedPreferences.
  *
- * Every read tolerates a corrupted document (it yields an empty value instead of
- * throwing) and every read-modify-write runs under one process-wide lock, because
- * the reader, the library and background scans each create their own instance.
+ * Parsed collections are cached in memory under [LOCK] so frequent queries
+ * (such as [isBookmarked] during page turns or [historyMap] while filtering)
+ * do not repeatedly re-parse JSON on the UI thread.
  */
 class Library(context: Context) {
     private val sp = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
     // ---------------- favorites ----------------
-    fun favorites(): MutableList<String> = readStringList(KEY_FAVORITES)
+    fun favorites(): MutableList<String> = synchronized(LOCK) {
+        val list = cachedFavorites ?: readStringList(KEY_FAVORITES).also { cachedFavorites = it }
+        ArrayList(list)
+    }
 
-    fun favoriteSet(): Set<String> = cachedSet(KEY_FAVORITES)
+    fun favoriteSet(): Set<String> = synchronized(LOCK) {
+        val list = cachedFavorites ?: readStringList(KEY_FAVORITES).also { cachedFavorites = it }
+        list.toHashSet()
+    }
 
-    fun isFavorite(path: String): Boolean = path in cachedSet(KEY_FAVORITES)
+    fun isFavorite(path: String): Boolean = synchronized(LOCK) {
+        val list = cachedFavorites ?: readStringList(KEY_FAVORITES).also { cachedFavorites = it }
+        list.contains(path)
+    }
 
     /** Returns true when the path was added, false when it was removed. */
     fun toggleFavorite(path: String): Boolean = synchronized(LOCK) {
@@ -36,13 +45,20 @@ class Library(context: Context) {
             true
         }
         writeStringList(KEY_FAVORITES, list)
+        cachedFavorites = list
         added
     }
 
     // ---------------- read marks ----------------
-    fun readSet(): MutableSet<String> = HashSet(cachedSet(KEY_READ))
+    fun readSet(): MutableSet<String> = synchronized(LOCK) {
+        val set = cachedRead ?: readStringList(KEY_READ).toHashSet().also { cachedRead = it }
+        HashSet(set)
+    }
 
-    fun isRead(path: String): Boolean = path in cachedSet(KEY_READ)
+    fun isRead(path: String): Boolean = synchronized(LOCK) {
+        val set = cachedRead ?: readStringList(KEY_READ).toHashSet().also { cachedRead = it }
+        set.contains(path)
+    }
 
     fun setRead(path: String, read: Boolean) = setReadMany(listOf(path), read)
 
@@ -50,16 +66,18 @@ class Library(context: Context) {
         synchronized(LOCK) {
             val set = readSet()
             val changed = if (read) set.addAll(paths) else set.removeAll(paths.toSet())
-            if (changed) writeStringList(KEY_READ, set.toList())
+            if (changed) {
+                writeStringList(KEY_READ, set.toList())
+                cachedRead = set
+            }
         }
     }
 
     // ---------------- history ----------------
-    fun history(): MutableList<HistoryItem> = ArrayList(cachedHistory())
-
-    private fun cachedHistory(): List<HistoryItem> = cached(KEY_HISTORY) { parseHistory(it) }
-
-    private fun parseHistory(arr: JSONArray): List<HistoryItem> {
+    fun history(): MutableList<HistoryItem> = synchronized(LOCK) {
+        val cached = cachedHistory
+        if (cached != null) return@synchronized ArrayList(cached)
+        val arr = readArray(KEY_HISTORY)
         val out = ArrayList<HistoryItem>(arr.length())
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
@@ -73,12 +91,13 @@ class Library(context: Context) {
                 )
             )
         }
-        return out
+        cachedHistory = out
+        ArrayList(out)
     }
 
-    fun historyMap(): Map<String, HistoryItem> = cachedHistory().associateBy { it.path }
+    fun historyMap(): Map<String, HistoryItem> = history().associateBy { it.path }
 
-    fun historyFor(path: String): HistoryItem? = cachedHistory().firstOrNull { it.path == path }
+    fun historyFor(path: String): HistoryItem? = history().firstOrNull { it.path == path }
 
     fun pageFor(path: String): Int = historyFor(path)?.page ?: 0
 
@@ -88,20 +107,23 @@ class Library(context: Context) {
             list.add(0, item)
             while (list.size > MAX_HISTORY) list.removeAt(list.size - 1)
             writeHistory(list)
+            cachedHistory = list
         }
     }
 
     /** Clear under the same lock as addHistory so a concurrent save cannot resurrect old entries. */
     fun clearHistory() {
-        synchronized(LOCK) { writeHistory(emptyList()) }
+        synchronized(LOCK) {
+            writeHistory(emptyList())
+            cachedHistory = emptyList()
+        }
     }
 
     // ---------------- bookmarks ----------------
-    fun bookmarks(): MutableList<Bookmark> = ArrayList(cachedBookmarks())
-
-    private fun cachedBookmarks(): List<Bookmark> = cached(KEY_BOOKMARKS) { parseBookmarks(it) }
-
-    private fun parseBookmarks(arr: JSONArray): List<Bookmark> {
+    fun bookmarks(): MutableList<Bookmark> = synchronized(LOCK) {
+        val cached = cachedBookmarks
+        if (cached != null) return@synchronized ArrayList(cached)
+        val arr = readArray(KEY_BOOKMARKS)
         val out = ArrayList<Bookmark>(arr.length())
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
@@ -115,32 +137,39 @@ class Library(context: Context) {
                 )
             )
         }
-        return out
+        cachedBookmarks = out
+        ArrayList(out)
     }
 
     fun bookmarksFor(path: String): List<Bookmark> =
-        cachedBookmarks().filter { it.path == path }.sortedBy { it.page }
+        bookmarks().filter { it.path == path }.sortedBy { it.page }
 
     fun isBookmarked(path: String, page: Int): Boolean =
-        cachedBookmarks().any { it.path == path && it.page == page }
+        bookmarks().any { it.path == path && it.page == page }
 
     fun addBookmark(bookmark: Bookmark) {
         synchronized(LOCK) {
             val list = ArrayList(bookmarks().filterNot { it.path == bookmark.path && it.page == bookmark.page })
             list.add(0, bookmark)
             writeBookmarks(list)
+            cachedBookmarks = list
         }
     }
 
     fun removeBookmark(path: String, page: Int) {
         synchronized(LOCK) {
-            writeBookmarks(bookmarks().filterNot { it.path == path && it.page == page })
+            val list = bookmarks().filterNot { it.path == path && it.page == page }
+            writeBookmarks(list)
+            cachedBookmarks = list
         }
     }
 
     /** Clear under the same lock as bookmark edits to avoid lost updates. */
     fun clearBookmarks() {
-        synchronized(LOCK) { writeBookmarks(emptyList()) }
+        synchronized(LOCK) {
+            writeBookmarks(emptyList())
+            cachedBookmarks = emptyList()
+        }
     }
 
     // ---------------- path maintenance (rename / move / delete) ----------------
@@ -150,53 +179,74 @@ class Library(context: Context) {
     fun replacePath(old: String, new: String) {
         synchronized(LOCK) {
             fun remap(p: String) = if (under(p, old)) new + p.removePrefix(old) else p
-            writeStringList(KEY_FAVORITES, favorites().map { remap(it) })
-            writeStringList(KEY_READ, readSet().map { remap(it) })
+            val newFavs = favorites().map { remap(it) }
+            writeStringList(KEY_FAVORITES, newFavs)
+            cachedFavorites = newFavs
+
+            val newRead = readSet().map { remap(it) }
+            writeStringList(KEY_READ, newRead)
+            cachedRead = newRead.toHashSet()
+
             val series = readObject(KEY_SERIES)
             val moved = JSONObject()
             series.keys().forEach { k -> moved.put(remap(k), series.get(k)) }
             sp.edit().putString(KEY_SERIES, moved.toString()).apply()
-            writeHistory(
-                history().map { h ->
-                    if (under(h.path, old)) {
-                        val np = remap(h.path)
-                        h.copy(path = np, name = np.substringAfterLast('/'))
-                    } else h
-                }
-            )
-            writeBookmarks(
-                bookmarks().map { b ->
-                    if (under(b.path, old)) {
-                        val np = remap(b.path)
-                        b.copy(path = np, name = np.substringAfterLast('/'))
-                    } else b
-                }
-            )
+
+            val newHistory = history().map { h ->
+                if (under(h.path, old)) {
+                    val np = remap(h.path)
+                    h.copy(path = np, name = np.substringAfterLast('/'))
+                } else h
+            }
+            writeHistory(newHistory)
+            cachedHistory = newHistory
+
+            val newBookmarks = bookmarks().map { b ->
+                if (under(b.path, old)) {
+                    val np = remap(b.path)
+                    b.copy(path = np, name = np.substringAfterLast('/'))
+                } else b
+            }
+            writeBookmarks(newBookmarks)
+            cachedBookmarks = newBookmarks
         }
     }
 
     /** Forgets everything stored for a deleted file or folder. */
     fun removePathsUnder(root: String) {
         synchronized(LOCK) {
-            writeStringList(KEY_FAVORITES, favorites().filterNot { under(it, root) })
-            writeStringList(KEY_READ, readSet().filterNot { under(it, root) })
+            val newFavs = favorites().filterNot { under(it, root) }
+            writeStringList(KEY_FAVORITES, newFavs)
+            cachedFavorites = newFavs
+
+            val newRead = readSet().filterNot { under(it, root) }
+            writeStringList(KEY_READ, newRead)
+            cachedRead = newRead.toHashSet()
+
             val series = readObject(KEY_SERIES)
             val kept = JSONObject()
             series.keys().forEach { k -> if (!under(k, root)) kept.put(k, series.get(k)) }
             sp.edit().putString(KEY_SERIES, kept.toString()).apply()
-            writeHistory(history().filterNot { under(it.path, root) })
-            writeBookmarks(bookmarks().filterNot { under(it.path, root) })
+
+            val newHistory = history().filterNot { under(it.path, root) }
+            writeHistory(newHistory)
+            cachedHistory = newHistory
+
+            val newBookmarks = bookmarks().filterNot { under(it.path, root) }
+            writeBookmarks(newBookmarks)
+            cachedBookmarks = newBookmarks
         }
     }
 
     // ---------------- per-series reader settings ----------------
-    fun seriesFor(folder: String): SeriesSettings? {
+    fun seriesFor(folder: String): SeriesSettings? = synchronized(LOCK) {
         val o = readObject(KEY_SERIES).optJSONObject(folder) ?: return null
-        return SeriesSettings(
+        SeriesSettings(
             mode = o.optString("mode", "paged"),
             dir = o.optString("dir", "ltr"),
             fit = o.optString("fit", "screen"),
-            twoPage = o.optBoolean("two", false)
+            twoPage = o.optBoolean("two", false),
+            coverSolo = o.optBoolean("coverSolo", true)
         )
     }
 
@@ -209,8 +259,12 @@ class Library(context: Context) {
             } else {
                 all.put(
                     folder,
-                    JSONObject().put("mode", settings.mode).put("dir", settings.dir)
-                        .put("fit", settings.fit).put("two", settings.twoPage)
+                    JSONObject()
+                        .put("mode", settings.mode)
+                        .put("dir", settings.dir)
+                        .put("fit", settings.fit)
+                        .put("two", settings.twoPage)
+                        .put("coverSolo", settings.coverSolo)
                 )
             }
             sp.edit().putString(KEY_SERIES, all.toString()).apply()
@@ -236,12 +290,9 @@ class Library(context: Context) {
             o.put("todaySeconds", o.optLong("todaySeconds") + safeSeconds)
 
             // Keep per-day totals so the dashboard can show a real weekly trend.
-            // Older installations have no dailyLog yet; this is an additive migration.
             val dailyLog = o.optJSONObject("dailyLog") ?: JSONObject()
             val existingDay = dailyLog.optJSONObject(today)
             val dayTotals = existingDay ?: JSONObject().apply {
-                // Preserve this day's totals when upgrading from versions that only
-                // stored today's counters, not a date-indexed activity log.
                 if (o.optString("dailyDate") == today) {
                     put("pages", (o.optLong("todayPages") - safePages).coerceAtLeast(0))
                     put("seconds", (o.optLong("todaySeconds") - safeSeconds).coerceAtLeast(0))
@@ -259,7 +310,6 @@ class Library(context: Context) {
             var has = false
             for (i in 0 until days.length()) if (days.optString(i) == today) has = true
             if (!has) days.put(today)
-            // Keep roughly ten years of days.
             val trimmed = JSONArray()
             for (i in (days.length() - MAX_DAYS).coerceAtLeast(0) until days.length()) trimmed.put(days.get(i))
             o.put("days", trimmed)
@@ -267,7 +317,7 @@ class Library(context: Context) {
         }
     }
 
-    fun stats(): ReadingStats {
+    fun stats(): ReadingStats = synchronized(LOCK) {
         val o = readObject(KEY_STATS)
         val days = HashSet<LocalDate>()
         o.optJSONArray("days")?.let { arr ->
@@ -275,7 +325,6 @@ class Library(context: Context) {
                 runCatching { days.add(LocalDate.parse(arr.getString(i))) }
             }
         }
-        // Current streak: consecutive days ending today (or yesterday if not read yet today).
         var streak = 0
         var d = LocalDate.now()
         if (d !in days) d = d.minusDays(1)
@@ -283,10 +332,9 @@ class Library(context: Context) {
             streak++
             d = d.minusDays(1)
         }
-        // Best streak over all days.
         var best = 0
         for (day in days) {
-            if (day.minusDays(1) in days) continue // not the start of a run
+            if (day.minusDays(1) in days) continue
             var len = 0
             var cur = day
             while (cur in days) {
@@ -295,7 +343,7 @@ class Library(context: Context) {
             }
             if (len > best) best = len
         }
-        return ReadingStats(
+        ReadingStats(
             seconds = o.optLong("seconds"),
             pages = o.optLong("pages"),
             chapters = readSet().size,
@@ -310,12 +358,12 @@ class Library(context: Context) {
     }
 
     /** Returns recent daily totals, including zero-activity days, oldest first. */
-    fun dailyActivity(days: Int = 7): List<DailyReading> {
+    fun dailyActivity(days: Int = 7): List<DailyReading> = synchronized(LOCK) {
         val count = days.coerceIn(1, 365)
         val o = readObject(KEY_STATS)
         val log = o.optJSONObject("dailyLog") ?: JSONObject()
         val today = LocalDate.now()
-        return (count - 1 downTo 0).map { offset ->
+        (count - 1 downTo 0).map { offset ->
             val date = today.minusDays(offset.toLong())
             val key = date.toString()
             val totals = log.optJSONObject(key)
@@ -347,11 +395,11 @@ class Library(context: Context) {
 
     // ---------------- backup ----------------
     /** The stored documents, keyed by name, as parsed JSON (for backup). */
-    fun exportAll(): JSONObject {
+    fun exportAll(): JSONObject = synchronized(LOCK) {
         val out = JSONObject()
         for (k in ARRAY_KEYS) out.put(k, readArray(k))
         for (k in OBJECT_KEYS) out.put(k, readObject(k))
-        return out
+        out
     }
 
     /**
@@ -364,6 +412,7 @@ class Library(context: Context) {
             for (k in ARRAY_KEYS) data.optJSONArray(k)?.let { e.putString(k, sanitizeArray(k, it).toString()) }
             for (k in OBJECT_KEYS) data.optJSONObject(k)?.let { e.putString(k, it.toString()) }
             e.apply()
+            invalidateCaches()
         }
     }
 
@@ -394,36 +443,11 @@ class Library(context: Context) {
             JSONObject()
         }
 
-    private fun readStringList(key: String): MutableList<String> = ArrayList(cachedStrings(key))
-
-    private fun parseStrings(arr: JSONArray): List<String> {
+    private fun readStringList(key: String): MutableList<String> {
+        val arr = readArray(key)
         val out = ArrayList<String>(arr.length())
         for (i in 0 until arr.length()) arr.optString(i, "").takeIf { it.isNotEmpty() }?.let { out.add(it) }
         return out
-    }
-
-    private fun cachedStrings(key: String): List<String> = cached(key) { parseStrings(it) }
-
-    private fun cachedSet(key: String): Set<String> = cached("$key#set") { parseStrings(it).toHashSet() }
-
-    /**
-     * The parsed form of a stored JSON array. Parsing the history or read list on every call
-     * made per-page checks (is this page bookmarked?) and list refreshes slow, so the result
-     * is kept until the stored text changes. Cached values are never mutated; the public
-     * accessors hand out copies.
-     */
-    @Suppress("UNCHECKED_CAST")
-    private fun <T> cached(cacheKey: String, parse: (JSONArray) -> T): T {
-        val spKey = cacheKey.substringBefore('#')
-        val raw = sp.getString(spKey, null) ?: "[]"
-        synchronized(CACHE) {
-            val hit = CACHE[cacheKey]
-            if (hit != null && hit.raw == raw) return hit.value as T
-        }
-        val arr = try { JSONArray(raw) } catch (e: JSONException) { JSONArray() }
-        val value = parse(arr)
-        synchronized(CACHE) { CACHE[cacheKey] = Parsed(raw, value) }
-        return value
     }
 
     private fun writeStringList(key: String, list: List<String>) {
@@ -469,9 +493,17 @@ class Library(context: Context) {
         val ARRAY_KEYS = listOf(KEY_FAVORITES, KEY_READ, KEY_HISTORY, KEY_BOOKMARKS)
         val OBJECT_KEYS = listOf(KEY_SERIES, KEY_STATS)
         val LOCK = Any()
-        private val CACHE = HashMap<String, Parsed>()
+
+        private var cachedFavorites: List<String>? = null
+        private var cachedRead: Set<String>? = null
+        private var cachedHistory: List<HistoryItem>? = null
+        private var cachedBookmarks: List<Bookmark>? = null
+
+        private fun invalidateCaches() {
+            cachedFavorites = null
+            cachedRead = null
+            cachedHistory = null
+            cachedBookmarks = null
+        }
     }
 }
-
-/** A parsed JSON document together with the stored text it was parsed from. */
-private class Parsed(val raw: String, val value: Any?)

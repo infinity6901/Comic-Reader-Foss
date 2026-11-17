@@ -24,8 +24,8 @@
         android:id="@+id/viewer_dim"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@android:color/black"
-        android:alpha="0" />
+        android:alpha="0"
+        android:background="@android:color/black" />
 
     <View
         android:id="@+id/night_overlay"
@@ -35,11 +35,28 @@
         android:clickable="false"
         android:visibility="gone" />
 
+    <!-- Compact fullscreen mini HUD pill shown when the main bars are hidden -->
+    <TextView
+        android:id="@+id/viewer_hud"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="12dp"
+        android:background="@drawable/bg_reader_bottom"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="3dp"
+        android:textColor="@color/reader_on_surface_dim"
+        android:textSize="11sp"
+        android:visibility="gone"
+        tools:text="12 / 45 · 88% · 23:58"
+        tools:visibility="visible" />
+
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/viewer_toolbar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
+        android:layout_height="wrap_content"
         android:background="@drawable/bg_reader_top"
+        android:minHeight="?attr/actionBarSize"
         android:theme="@style/ThemeOverlay.ComicReader.Reader"
         app:navigationIcon="@drawable/ic_back"
         app:navigationIconTint="@android:color/white"
@@ -70,12 +87,12 @@
                 android:id="@+id/viewer_chapter_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:maxWidth="96dp"
                 android:ellipsize="end"
                 android:maxLines="1"
+                android:maxWidth="104dp"
                 android:textColor="@color/reader_on_surface_dim"
                 android:textSize="11sp"
-                tools:text="Ch. 1044" />
+                tools:text="Long strip" />
 
             <SeekBar
                 android:id="@+id/viewer_seek"

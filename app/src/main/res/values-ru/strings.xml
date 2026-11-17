@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings">Настройки</string>
+    <string name="tab_browse">Обзор</string>
+    <string name="tab_favorites">Избранное</string>
+    <string name="tab_history">История</string>
+    <string name="tab_bookmarks">Закладки</string>
+    <string name="menu_favorites">Избранное</string>
+    <string name="menu_history">История чтения</string>
+    <string name="menu_bookmarks">Закладки</string>
+    <string name="menu_search">Поиск</string>
+    <string name="menu_sort">Сортировка</string>
+    <string name="menu_grid">Сетка</string>
+    <string name="menu_list_view">Список</string>
+    <string name="menu_settings">Настройки</string>
+    <string name="menu_about">О приложении</string>
+    <string name="menu_exit">Выход</string>
+    <string name="menu_continue">Продолжить чтение</string>
+    <string name="menu_random_unread">Случайный непрочитанный комикс</string>
+    <string name="menu_storage">Сменить хранилище…</string>
+    <string name="menu_read_folder">Читать папку как главу</string>
+    <string name="menu_reader_settings">Настройки чтения</string>
+    <string name="menu_page_mode">Режим страниц</string>
+    <string name="page_mode_paged">Листание</string>
+    <string name="page_mode_vertical">Вертикальный</string>
+    <string name="page_mode_longstrip">Вебтун (лента)</string>
+    <string name="menu_fit">Масштаб</string>
+    <string name="menu_fit_screen">По экрану</string>
+    <string name="menu_fit_width">По ширине</string>
+    <string name="menu_fit_height">По высоте</string>
+    <string name="menu_fit_stretch">Растянуть</string>
+    <string name="menu_reading_dir">Направление чтения</string>
+    <string name="reading_ltr">Слева направо</string>
+    <string name="reading_rtl">Справа налево</string>
+    <string name="menu_two_page">Разворот (2 страницы)</string>
+    <string name="menu_cover_solo">Обложка отдельно</string>
+    <string name="menu_auto_crop">Автообрезка полей</string>
+    <string name="menu_comic_info">О комиксе</string>
+    <string name="menu_sleep_timer">Таймер сна</string>
+    <string name="menu_reader_hud">Мини-индикатор в полном экране</string>
+    <string name="read_badge">Прочитано</string>
+    <string name="recent">Недавнее</string>
+</resources>

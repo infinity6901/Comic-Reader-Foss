@@ -81,8 +81,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_1"
-            app:singleLine="false"
             app:selectionRequired="true"
+            app:singleLine="false"
             app:singleSelection="true">
 
             <com.google.android.material.chip.Chip
@@ -129,6 +129,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_1"
             app:selectionRequired="true"
+            app:singleLine="false"
             app:singleSelection="true">
 
             <com.google.android.material.chip.Chip
@@ -182,6 +183,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_1"
             app:selectionRequired="true"
+            app:singleLine="false"
             app:singleSelection="true">
 
             <com.google.android.material.chip.Chip
@@ -260,7 +262,9 @@
             android:id="@+id/sheet_auto_speed_value"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_2"
             android:textAppearance="@style/TextAppearance.ComicReader.Label"
+            android:textColor="?attr/colorPrimary"
             tools:text="Auto-scroll speed: 5 / 10" />
 
         <com.google.android.material.slider.Slider
@@ -287,6 +291,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_1"
             app:selectionRequired="true"
+            app:singleLine="false"
             app:singleSelection="true">
 
             <com.google.android.material.chip.Chip
@@ -329,6 +334,13 @@
             android:text="@string/menu_two_page" />
 
         <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/sheet_cover_solo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/menu_cover_solo" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/sheet_auto_crop"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -364,6 +376,13 @@
             android:text="@string/menu_fullscreen" />
 
         <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/sheet_reader_hud"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/menu_reader_hud" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/sheet_auto_next"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -393,6 +412,13 @@
             android:layout_height="wrap_content"
             android:minHeight="48dp"
             android:text="@string/pref_volume_keys" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/sheet_invert_volume"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/pref_invert_volume" />
 
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/sheet_double_tap"
@@ -470,6 +496,33 @@
                 android:layout_marginStart="@dimen/space_1"
                 android:layout_weight="1"
                 android:text="@string/sheet_save"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_1"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/sheet_comic_info"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="@dimen/space_1"
+                android:layout_weight="1"
+                android:text="@string/menu_comic_info"
+                android:textSize="12sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/sheet_sleep_timer"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_1"
+                android:layout_weight="1"
+                android:text="@string/menu_sleep_timer"
                 android:textSize="12sp" />
         </LinearLayout>
 

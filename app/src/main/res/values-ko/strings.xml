@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings">설정</string>
+    <string name="tab_browse">탐색</string>
+    <string name="tab_favorites">즐겨찾기</string>
+    <string name="tab_history">기록</string>
+    <string name="tab_bookmarks">북마크</string>
+    <string name="menu_favorites">즐겨찾기</string>
+    <string name="menu_history">읽기 기록</string>
+    <string name="menu_bookmarks">북마크</string>
+    <string name="menu_search">검색</string>
+    <string name="menu_sort">정렬</string>
+    <string name="menu_grid">그리드 보기</string>
+    <string name="menu_list_view">목록 보기</string>
+    <string name="menu_settings">설정</string>
+    <string name="menu_about">정보</string>
+    <string name="menu_exit">종료</string>
+    <string name="menu_continue">이어서 읽기</string>
+    <string name="menu_random_unread">안 읽은 만화 랜덤 선택</string>
+    <string name="menu_storage">저장소 전환…</string>
+    <string name="menu_read_folder">폴더를 한 화로 읽기</string>
+    <string name="menu_reader_settings">리더 설정</string>
+    <string name="menu_page_mode">페이지 모드</string>
+    <string name="page_mode_paged">페이지</string>
+    <string name="page_mode_vertical">세로</string>
+    <string name="page_mode_longstrip">웹툰 (롱스트립)</string>
+    <string name="menu_fit">맞춤</string>
+    <string name="menu_fit_screen">화면 맞춤</string>
+    <string name="menu_fit_width">가로 맞춤</string>
+    <string name="menu_fit_height">세로 맞춤</string>
+    <string name="menu_fit_stretch">늘이기</string>
+    <string name="menu_reading_dir">읽기 방향</string>
+    <string name="reading_ltr">왼쪽에서 오른쪽</string>
+    <string name="reading_rtl">오른쪽에서 왼쪽</string>
+    <string name="menu_two_page">두 페이지 보기</string>
+    <string name="menu_cover_solo">표지 단독 표시</string>
+    <string name="menu_auto_crop">여백 자동 자르기</string>
+    <string name="menu_comic_info">만화 정보</string>
+    <string name="menu_sleep_timer">취침 타이머</string>
+    <string name="menu_reader_hud">전체화면 미니 상태바 표시</string>
+    <string name="read_badge">읽음</string>
+    <string name="recent">최근</string>
+</resources>

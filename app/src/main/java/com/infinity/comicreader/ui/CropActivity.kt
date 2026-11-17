@@ -6,13 +6,14 @@ import android.graphics.Matrix
 import android.graphics.Rect
 import android.os.Bundle
 import android.os.Environment
+import android.view.View
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.appbar.MaterialToolbar
 import com.infinity.comicreader.R
 import com.infinity.comicreader.util.AppDispatchers
-import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -37,8 +38,9 @@ class CropActivity : AppCompatActivity() {
         cropView = findViewById(R.id.crop_view)
         progress = findViewById(R.id.crop_progress)
 
-        findViewById<android.view.View>(R.id.crop_rotate).setOnClickListener { rotate() }
-        findViewById<android.view.View>(R.id.crop_save).setOnClickListener { save() }
+        findViewById<View>(R.id.crop_reset)?.setOnClickListener { cropView.resetSelection() }
+        findViewById<View>(R.id.crop_rotate).setOnClickListener { rotate() }
+        findViewById<View>(R.id.crop_save).setOnClickListener { save() }
 
         sourcePath = intent.getStringExtra(EXTRA_PATH)
         if (sourcePath == null) {
@@ -48,12 +50,18 @@ class CropActivity : AppCompatActivity() {
         load()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        bitmap?.let { if (!it.isRecycled) it.recycle() }
+        bitmap = null
+    }
+
     private fun load() {
         val path = sourcePath ?: return
-        progress.visibility = android.view.View.VISIBLE
+        progress.visibility = View.VISIBLE
         lifecycleScope.launch {
             val decoded = withContext(AppDispatchers.io) { decodeCapped(path, 3000) }
-            progress.visibility = android.view.View.GONE
+            progress.visibility = View.GONE
             if (decoded == null) {
                 toast(R.string.error_open)
                 finish()
@@ -70,28 +78,24 @@ class CropActivity : AppCompatActivity() {
         val rotated = Bitmap.createBitmap(current, 0, 0, current.width, current.height, matrix, true)
         bitmap = rotated
         cropView.setBitmap(rotated)
-        // Rotation creates a new bitmap for non-empty images. The crop view now
-        // points at the replacement, so release the previous native pixel buffer.
         if (rotated !== current && !current.isRecycled) current.recycle()
     }
 
     private fun save() {
         val current = bitmap ?: return
         val rect: Rect = cropView.bitmapCropRect()
-        // Snapshot the crop input so a subsequent rotate cannot recycle the bitmap
-        // while the background save is reading it.
         val snapshot = runCatching { current.copy(Bitmap.Config.ARGB_8888, false) }.getOrNull() ?: run {
             toast(R.string.crop_failed)
             return
         }
-        progress.visibility = android.view.View.VISIBLE
+        progress.visibility = View.VISIBLE
         lifecycleScope.launch {
             val out = try {
                 withContext(AppDispatchers.io) { cropAndWrite(snapshot, rect) }
             } finally {
                 if (!snapshot.isRecycled) snapshot.recycle()
             }
-            progress.visibility = android.view.View.GONE
+            progress.visibility = View.GONE
             if (out != null) {
                 toast(getString(R.string.crop_saved, out.absolutePath))
                 setResult(RESULT_OK, android.content.Intent().putExtra(EXTRA_RESULT, out.absolutePath))
@@ -129,9 +133,6 @@ class CropActivity : AppCompatActivity() {
         BitmapFactory.decodeFile(path, bounds)
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
         var sample = 1
-        // Bound the longest edge, not both edges. Requiring both dimensions to
-        // remain above maxDim fails for tall/ultrawide images and can decode tens
-        // of millions of pixels into the crop screen.
         while (maxOf(bounds.outWidth / sample, bounds.outHeight / sample) > maxDim && sample <= (1 shl 29)) {
             sample *= 2
         }

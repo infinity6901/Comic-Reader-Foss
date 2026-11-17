@@ -3,12 +3,16 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-// Signing: when CI (or you, locally) provides a keystore through the environment, both the
-// debug and release APKs are signed with that one stable key, so every build can be installed
-// over the previous one. Without it (e.g. a plain local build or a pull request) Gradle's
-// auto-generated debug key is used instead, which differs per machine.
+// Signing: when CI (or you, locally) provides a keystore through the environment, the
+// release APK is signed with that stable key so every release installs cleanly over the
+// previous one. Debug builds use an isolated ".debug" applicationIdSuffix so a debuggable
+// APK can never cross-grade over a production release installation.
 //   KEYSTORE_FILE (path), KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
 val stableKeystore: File? = System.getenv("KEYSTORE_FILE")?.let { File(it) }?.takeIf { it.isFile }
+val hasStableCredentials = stableKeystore != null &&
+    !System.getenv("KEYSTORE_PASSWORD").isNullOrBlank() &&
+    !System.getenv("KEY_ALIAS").isNullOrBlank() &&
+    !System.getenv("KEY_PASSWORD").isNullOrBlank()
 
 android {
     namespace = "com.infinity.comicreader"
@@ -18,14 +22,13 @@ android {
         applicationId = "com.infinity.comicreader"
         minSdk = 26
         targetSdk = 34
-        versionCode = 14
-        versionName = "2.3"
+        versionCode = 15
+        versionName = "2.4"
         vectorDrawables { useSupportLibrary = true }
     }
 
-
     signingConfigs {
-        if (stableKeystore != null) {
+        if (hasStableCredentials) {
             create("stable") {
                 storeFile = stableKeystore
                 storePassword = System.getenv("KEYSTORE_PASSWORD")
@@ -37,6 +40,7 @@ android {
 
     buildTypes {
         debug {
+            applicationIdSuffix = ".debug"
             signingConfigs.findByName("stable")?.let { signingConfig = it }
         }
         release {

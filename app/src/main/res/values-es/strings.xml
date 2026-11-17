@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings">Ajustes</string>
+    <string name="tab_browse">Explorar</string>
+    <string name="tab_favorites">Favoritos</string>
+    <string name="tab_history">Historial</string>
+    <string name="tab_bookmarks">Marcadores</string>
+    <string name="menu_favorites">Favoritos</string>
+    <string name="menu_history">Historial</string>
+    <string name="menu_bookmarks">Marcadores</string>
+    <string name="menu_search">Buscar</string>
+    <string name="menu_sort">Ordenar</string>
+    <string name="menu_grid">Vista de cuadrícula</string>
+    <string name="menu_list_view">Vista de lista</string>
+    <string name="menu_settings">Ajustes</string>
+    <string name="menu_about">Información</string>
+    <string name="menu_exit">Salir</string>
+    <string name="menu_continue">Continuar leyendo</string>
+    <string name="menu_random_unread">Cómic no leído al azar</string>
+    <string name="menu_storage">Cambiar almacenamiento…</string>
+    <string name="menu_read_folder">Leer carpeta como capítulo</string>
+    <string name="menu_reader_settings">Ajustes del lector</string>
+    <string name="menu_page_mode">Modo de página</string>
+    <string name="page_mode_paged">Paginado</string>
+    <string name="page_mode_vertical">Vertical</string>
+    <string name="page_mode_longstrip">Tira continua</string>
+    <string name="menu_fit">Ajuste</string>
+    <string name="menu_fit_screen">Ajustar a pantalla</string>
+    <string name="menu_fit_width">Ajustar al ancho</string>
+    <string name="menu_fit_height">Ajustar al alto</string>
+    <string name="menu_fit_stretch">Estirar</string>
+    <string name="menu_reading_dir">Dirección de lectura</string>
+    <string name="reading_ltr">Izquierda a derecha</string>
+    <string name="reading_rtl">Derecha a izquierda</string>
+    <string name="menu_two_page">Doble página</string>
+    <string name="menu_cover_solo">Portada individual</string>
+    <string name="menu_auto_crop">Recortar márgenes</string>
+    <string name="menu_comic_info">Información del cómic</string>
+    <string name="menu_sleep_timer">Temporizador</string>
+    <string name="menu_reader_hud">Mostrar mini HUD en pantalla completa</string>
+    <string name="read_badge">Leído</string>
+    <string name="recent">Reciente</string>
+</resources>

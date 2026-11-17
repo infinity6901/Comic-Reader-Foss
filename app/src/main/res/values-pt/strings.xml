@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings">Configurações</string>
+    <string name="tab_browse">Explorar</string>
+    <string name="tab_favorites">Favoritos</string>
+    <string name="tab_history">Histórico</string>
+    <string name="tab_bookmarks">Marcadores</string>
+    <string name="menu_favorites">Favoritos</string>
+    <string name="menu_history">Histórico</string>
+    <string name="menu_bookmarks">Marcadores</string>
+    <string name="menu_search">Pesquisar</string>
+    <string name="menu_sort">Ordenar</string>
+    <string name="menu_grid">Visualização em grade</string>
+    <string name="menu_list_view">Visualização em lista</string>
+    <string name="menu_settings">Configurações</string>
+    <string name="menu_about">Sobre</string>
+    <string name="menu_exit">Sair</string>
+    <string name="menu_continue">Continuar lendo</string>
+    <string name="menu_random_unread">Quadrinho não lido aleatório</string>
+    <string name="menu_storage">Alternar armazenamento…</string>
+    <string name="menu_read_folder">Ler pasta como capítulo</string>
+    <string name="menu_reader_settings">Opções do leitor</string>
+    <string name="menu_page_mode">Modo de página</string>
+    <string name="page_mode_paged">Paginado</string>
+    <string name="page_mode_vertical">Vertical</string>
+    <string name="page_mode_longstrip">Tira longa (Webtoon)</string>
+    <string name="menu_fit">Ajuste</string>
+    <string name="menu_fit_screen">Ajustar à tela</string>
+    <string name="menu_fit_width">Ajustar à largura</string>
+    <string name="menu_fit_height">Ajustar à altura</string>
+    <string name="menu_fit_stretch">Esticar</string>
+    <string name="menu_reading_dir">Direção de leitura</string>
+    <string name="reading_ltr">Esquerda para direita</string>
+    <string name="reading_rtl">Direita para esquerda</string>
+    <string name="menu_two_page">Página dupla</string>
+    <string name="menu_cover_solo">Capa isolada</string>
+    <string name="menu_auto_crop">Cortar margens</string>
+    <string name="menu_comic_info">Informações da edição</string>
+    <string name="menu_sleep_timer">Temporizador</string>
+    <string name="menu_reader_hud">Mostrar mini HUD em tela cheia</string>
+    <string name="read_badge">Lido</string>
+    <string name="recent">Recente</string>
+</resources>

@@ -4,20 +4,20 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import android.util.LruCache
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.Gravity
-import android.widget.TextView
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.infinity.comicreader.reader.BitmapUtils
 import com.infinity.comicreader.reader.Filters
 import com.infinity.comicreader.reader.PageSource
 import com.infinity.comicreader.util.AppDispatchers
 import com.infinity.comicreader.util.SpreadLayout
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -42,19 +42,6 @@ import java.util.concurrent.atomic.AtomicInteger
  *  - [Mode.VERTICAL]  vertical list, one full-height page per screen;
  *  - [Mode.LONG_STRIP] continuous vertical strip sized from each page's aspect
  *                     ratio with no gaps, as used by webtoons/manhwa.
- *
- * Decoding happens off the main thread, at most [DECODE_THREADS] pages at a time.
- * Results live in a byte-budgeted cache, a page that is requested twice shares one
- * decode, a decode nobody is waiting for any more is dropped before it starts, and
- * the next [preload] pages are decoded ahead of time. With [autoCrop] blank borders
- * are trimmed (never in long-strip mode, where the gaps belong to the art).
- *
- * A [RecyclerView.Adapter] has a fixed item view type, so callers build a fresh
- * instance whenever the mode, spread, reading direction or [autoCrop] changes.
- *
- * Vertical and long-strip layouts may hold more than one chapter ([append]), with
- * [dropTo]/[dropAfter] trimming chapters off either end; pages are addressed by
- * their absolute number in the strip, so the cache survives trims untouched.
  */
 class PageAdapter(
     source: PageSource,
@@ -62,6 +49,7 @@ class PageAdapter(
     private val onTap: (Float) -> Unit,
     private val doubleTapZoom: Boolean,
     private val twoPage: Boolean = false,
+    private val coverSolo: Boolean = false,
     private val rtl: Boolean = false,
     private val onVerticalDrag: ((Float) -> Unit)? = null,
     private val autoCrop: Boolean = false,
@@ -83,7 +71,6 @@ class PageAdapter(
         set(value) {
             if (field == value) return
             field = value
-            // Paged pages are decoded for the active fit mode, so they must be redone.
             if (mode == Mode.PAGED) dropDecoded()
             notifyItemRangeChanged(0, itemCount)
         }
@@ -106,8 +93,6 @@ class PageAdapter(
     }
     private val pending = HashMap<Int, Pending>()
     private val aspects = ConcurrentHashMap<Int, Float>()
-    // A decode can finish after its page was trimmed and its absolute index reused.
-    // Epochs plus a small mutation lock prevent stale results from repopulating cache.
     private val cacheMutationLock = Any()
     private val pageEpochs = ConcurrentHashMap<Int, Long>()
     private var learnedAspect = 1.45f
@@ -118,6 +103,7 @@ class PageAdapter(
     private var layoutListener: View.OnLayoutChangeListener? = null
 
     private val spread = twoPage && mode == Mode.PAGED
+    private val effectiveCoverSolo = spread && coverSolo
 
     /** A chapter laid into the strip: [first] is its first page in the whole strip. */
     private class Segment(
@@ -129,18 +115,6 @@ class PageAdapter(
         val closed: AtomicBoolean = AtomicBoolean(false)
     )
 
-    /**
-     * The chapters currently in the strip, in reading order. A vertical or long-strip
-     * reader with "auto next chapter" on appends the following chapter, so scrolling
-     * simply continues into it instead of stopping at the chapter's end. [base] is
-     * the strip page item 0 shows, which lets chapters already read past be trimmed
-     * away without renumbering the decoded-page cache.
-     *
-     * This list owns its sources: a chapter stays open while its pages can still be
-     * addressed by absolute index, and is closed once it is trimmed off the strip or
-     * the adapter is released, whichever comes last. Closing a chapter the moment it
-     * is scrolled past would race with decodes that are still in flight for it.
-     */
     private val segments = ArrayList<Segment>()
     private val total get() = segments.sumOf { it.count }
     private val end get() = segments.lastOrNull()?.let { it.first + it.count } ?: 0
@@ -148,25 +122,21 @@ class PageAdapter(
     private var released = false
 
     init {
-        // Segment counts are always physical pages, never spread rows.
         segments += Segment(source, 0, source.pageCount)
     }
 
     inner class PageHolder(
         val container: View,
+        val cells: List<View>,
         val images: List<ZoomImageView>,
         val errors: List<TextView>
     ) : RecyclerView.ViewHolder(container) {
-        /** The page each image is showing or waiting for, and the coroutine waiting for it. */
         val pages = IntArray(images.size) { NO_PAGE }
         val waiters = arrayOfNulls<Job>(images.size)
     }
 
-    // The segment table always counts physical source pages. In spread mode the
-    // RecyclerView presents pairs, so its item count is the ceiling of pageCount / 2.
-    // Keeping these two counts separate prevents the second half of a book from
-    // being rejected as out-of-range when a spread asks for physical page 2, 3, ...
-    override fun getItemCount(): Int = if (spread) SpreadLayout.itemCount(total) else (end - base).coerceAtLeast(0)
+    override fun getItemCount(): Int =
+        if (spread) SpreadLayout.itemCount(total, effectiveCoverSolo) else (end - base).coerceAtLeast(0)
 
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
         super.onAttachedToRecyclerView(recyclerView)
@@ -205,15 +175,17 @@ class PageAdapter(
             val right = makeImage(context)
             val leftError = makeErrorLabel(context)
             val rightError = makeErrorLabel(context)
+            val cells = ArrayList<View>(2)
             fun addPage(image: ZoomImageView, error: TextView) {
                 val cell = FrameLayout(context)
                 cell.addView(image, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
                 cell.addView(error, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
                 row.addView(cell, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+                cells.add(cell)
             }
             addPage(left, leftError)
             addPage(right, rightError)
-            return PageHolder(row, listOf(left, right), listOf(leftError, rightError))
+            return PageHolder(row, cells, listOf(left, right), listOf(leftError, rightError))
         }
         val container = FrameLayout(context).apply {
             layoutParams = RecyclerView.LayoutParams(
@@ -231,7 +203,7 @@ class PageAdapter(
             )
         )
         container.addView(error, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        return PageHolder(container, listOf(image), listOf(error))
+        return PageHolder(container, listOf(container), listOf(image), listOf(error))
     }
 
     private fun makeErrorLabel(context: Context): TextView = TextView(context).apply {
@@ -253,27 +225,25 @@ class PageAdapter(
     }
 
     override fun onBindViewHolder(holder: PageHolder, position: Int) {
-        // [position] is an item index; strip pages keep their chapter-relative number,
-        // so shift by [base] (0 in paged mode, where nothing is ever appended).
         val page = position + base
         if (spread) {
-            val firstPage = SpreadLayout.firstPage(page, rtl)
-            val secondPage = SpreadLayout.secondPage(page, rtl)
-            bindImage(holder, 0, firstPage)
-            bindImage(holder, 1, secondPage)
-            prefetchAfter(page * 2 + 1)
+            val firstPage = SpreadLayout.firstPage(page, rtl, effectiveCoverSolo)
+            val secondPage = SpreadLayout.secondPage(page, rtl, effectiveCoverSolo)
+            val firstValid = firstPage in base until end
+            val secondValid = secondPage in base until end
+            // Hide an unused half-cell (e.g. solo cover page or odd final page) so the single page centers cleanly.
+            holder.cells[0].visibility = if (firstValid || !secondValid) View.VISIBLE else View.GONE
+            holder.cells[1].visibility = if (secondValid) View.VISIBLE else View.GONE
+            bindImage(holder, 0, if (firstValid) firstPage else NO_PAGE)
+            bindImage(holder, 1, if (secondValid) secondPage else NO_PAGE)
+            val maxShown = maxOf(firstPage, secondPage).coerceAtLeast(0)
+            prefetchAfter(maxShown)
         } else {
             bindImage(holder, 0, page)
             prefetchAfter(page)
         }
     }
 
-    /**
-     * Lays the pages of [next] in behind the ones already shown, so a strip reader
-     * rolls from this chapter's last page straight into the next one. Refused in
-     * paged mode, whose pages are laid out two at a time and never rolled over.
-     * Main thread only.
-     */
     fun append(next: PageSource): Boolean {
         if (spread || next.pageCount <= 0 || released) return false
         segments += Segment(next, end, next.pageCount)
@@ -282,19 +252,10 @@ class PageAdapter(
         return true
     }
 
-    /**
-     * Forgets every strip item before [absolute] (a chapter that was read past),
-     * leaving item 0 to show that page. Keeps the decoded-page cache valid because
-     * pages are addressed by their absolute number, not by item index.
-     * Main thread only.
-     */
     fun dropTo(absolute: Int) {
         val keep = absolute.coerceIn(base, end)
         if (keep == base) return
         val oldBase = base
-        // Pages before the new base can never be requested again. Drop their decoded
-        // bitmaps and pending work now rather than retaining an entire read chapter in
-        // the cache until unrelated pages happen to evict it.
         invalidatePageRange(oldBase, keep)
         forget { it.first + it.count <= keep }
         val removed = keep - base
@@ -302,31 +263,22 @@ class PageAdapter(
         notifyItemRangeRemoved(0, removed)
     }
 
-    /** [dropTo] for an item index of the strip as currently laid out (0 = first item). */
     fun dropItemsBefore(item: Int) = dropTo(base + item)
 
-    /** Removes every appended chapter, leaving only the first one still in the strip. */
     fun dropAppended() {
         if (segments.size < 2) return
         dropAfter(segments[1].first)
     }
 
-    /**
-     * Undoes an append: throws away every chapter starting at [first] (used when
-     * "auto next chapter" is switched off again mid-chapter). Main thread only.
-     */
     fun dropAfter(first: Int) {
         val oldEnd = end
         if (first >= oldEnd) return
         val removed = oldEnd - first
-        // Absolute page indexes are reused when a different chapter is appended at
-        // this point. Invalidate decoded and in-flight work before those indexes reuse.
         invalidatePageRange(first, oldEnd)
         forget { it.first >= first }
         notifyItemRangeRemoved(first - base, removed)
     }
 
-    /** Remove cached/in-flight data for absolute pages in [start, endExclusive). */
     private fun invalidatePageRange(start: Int, endExclusive: Int) {
         if (endExclusive <= start) return
         synchronized(cacheMutationLock) {
@@ -341,17 +293,11 @@ class PageAdapter(
         }
     }
 
-    /**
-     * Drops the chapters [gone] picks, closing the ones leaving the strip. A chapter
-     * stays open while its pages can still be addressed by absolute index, so the
-     * bookkeeping above is all that runs while it is merely trimmed from the layout.
-     */
     private fun forget(gone: (Segment) -> Boolean) {
         segments.filter(gone).forEach { retire(it) }
         segments.removeAll(gone)
     }
 
-    /** Releases a chapter once it is no longer wanted and no decodes are in flight. */
     private fun retire(seg: Segment) {
         seg.wanted = false
         if (seg.loads.get() == 0) closeOnce(seg)
@@ -359,13 +305,18 @@ class PageAdapter(
 
     private fun closeOnce(seg: Segment) {
         if (seg.closed.compareAndSet(false, true)) {
-            runCatching { seg.source.close() }
+            scope.launch(AppDispatchers.io) {
+                runCatching { seg.source.close() }
+            }
         }
     }
 
-    /** Decrements the load count; closes the source if no more wanted and no more loads. */
     private fun releaseLoad(seg: Segment) {
-        if (seg.loads.decrementAndGet() == 0 && !seg.wanted) closeOnce(seg)
+        if (seg.loads.decrementAndGet() == 0 && !seg.wanted) {
+            if (seg.closed.compareAndSet(false, true)) {
+                runCatching { seg.source.close() }
+            }
+        }
     }
 
     override fun onViewRecycled(holder: PageHolder) {
@@ -427,7 +378,6 @@ class PageAdapter(
         }
     }
 
-    /** Forgets the page [slot] was waiting for; abandons its decode if nobody else wants it. */
     private fun stopWaiting(holder: PageHolder, slot: Int) {
         holder.waiters[slot]?.cancel()
         holder.waiters[slot] = null
@@ -442,7 +392,6 @@ class PageAdapter(
         }
     }
 
-    /** Applies the per-mode container geometry (long-strip height, or page spacing). */
     private fun prepareContainer(holder: PageHolder, pageIndex: Int) {
         if (mode == Mode.LONG_STRIP) {
             applyHeight(holder.container, longStripHeight(pageIndex))
@@ -466,12 +415,14 @@ class PageAdapter(
 
     private fun decode(source: PageSource, index: Int, reqW: Int, reqH: Int): Bitmap? = try {
         val raw = source.loadPage(index, reqW, reqH)
-        if (autoCrop && mode != Mode.LONG_STRIP) {
-            val cropped = BitmapUtils.autoCrop(raw)
-            // autoCrop returns the original when no crop is needed, otherwise it
-            // allocates a second native bitmap. Release the larger source promptly.
-            if (cropped !== raw && !raw.isRecycled) raw.recycle()
-            cropped
+        if (autoCrop) {
+            val processed = if (mode == Mode.LONG_STRIP) {
+                BitmapUtils.trimVerticalGaps(raw)
+            } else {
+                BitmapUtils.autoCrop(raw)
+            }
+            if (processed !== raw && !raw.isRecycled) raw.recycle()
+            processed
         } else raw
     } catch (e: CancellationException) {
         throw e
@@ -480,21 +431,15 @@ class PageAdapter(
         null
     }
 
-    /** Starts (or joins) the background decode of [pageIndex]. Main thread only. */
     private fun request(pageIndex: Int, reqW: Int, reqH: Int): Pending {
         pending[pageIndex]?.let { return it }
         val seg = segments.lastOrNull { pageIndex >= it.first } ?: segments[0]
         val epoch = synchronized(cacheMutationLock) { pageEpochs[pageIndex] ?: 0L }
-        // Keep the chapter open while its page is being decoded, even if the strip
-        // rolls on past it in the meantime.
         seg.loads.incrementAndGet()
         val deferred = scope.async(AppDispatchers.io) {
             gate.withPermit {
                 val bitmap = decode(seg.source, pageIndex - seg.first, reqW, reqH)
                 if (bitmap != null) {
-                    // Archive/PDF decoders may be blocking and cannot always stop in the
-                    // middle of a read. Re-check cancellation immediately after decoding
-                    // so a trimmed chapter cannot repopulate its invalidated cache range.
                     val coroutineContext = currentCoroutineContext()
                     val accepted = try {
                         synchronized(cacheMutationLock) {
@@ -525,13 +470,11 @@ class PageAdapter(
         val entry = Pending(deferred)
         pending[pageIndex] = entry
         deferred.invokeOnCompletion {
-            // Runs on the decoder thread; hop back before touching [pending].
             scope.launch { if (pending[pageIndex] === entry) pending.remove(pageIndex) }
         }
         return entry
     }
 
-    /** Decodes the [preload] pages after [lastShown] into the cache. */
     private fun prefetchAfter(lastShown: Int) {
         val ahead = if (mode == Mode.LONG_STRIP) minOf(preload, MAX_STRIP_PRELOAD) else preload
         for (k in 1..ahead) {
@@ -541,9 +484,7 @@ class PageAdapter(
         }
     }
 
-    /** Throws away everything decoded so far (the requested size changed). */
     private fun dropDecoded() {
-        // Cancelling can complete handlers inline, which edit [pending]: iterate a copy.
         pending.values.toList().forEach { it.deferred.cancel() }
         pending.clear()
         synchronized(cacheMutationLock) { cache.evictAll() }
@@ -551,10 +492,9 @@ class PageAdapter(
 
     // ------------------------------------------------------------------ long strip
 
-    /** Learns each page's real aspect ratio once its bitmap arrives, for long strips. */
     private fun updateLongStripAspect(holder: PageHolder, pageIndex: Int, bitmap: Bitmap) {
         if (mode != Mode.LONG_STRIP || bitmap.width <= 0) return
-        if (pageIndex == 0) learnedAspect = bitmap.height.toFloat() / bitmap.width.toFloat()
+        if (pageIndex == base) learnedAspect = bitmap.height.toFloat() / bitmap.width.toFloat()
         applyHeight(holder.container, longStripHeight(pageIndex))
     }
 
@@ -587,8 +527,6 @@ class PageAdapter(
 
     private fun learnAspect() {
         val seg = segments.firstOrNull() ?: return
-        // Reading the page size touches the archive, so hold the chapter open
-        // while the query is in flight.
         seg.loads.incrementAndGet()
         scope.launch {
             val size = withContext(AppDispatchers.io) {
@@ -597,7 +535,7 @@ class PageAdapter(
             releaseLoad(seg)
             if (size != null && size[0] > 0) {
                 learnedAspect = size[1].toFloat() / size[0].toFloat()
-                aspects.putIfAbsent(0, learnedAspect)
+                aspects.putIfAbsent(base, learnedAspect)
                 notifyItemRangeChanged(0, itemCount)
             }
         }
@@ -608,9 +546,6 @@ class PageAdapter(
         scope.cancel()
         pending.clear()
         synchronized(cacheMutationLock) { cache.evictAll() }
-        // The reader owns the sources still in the strip and re-lays them into the next
-        // adapter it builds (every layout change makes a new one), so nothing is closed
-        // here: only chapters trimmed off by dropTo/dropAfter are closed by the adapter.
         segments.clear()
         base = 0
     }

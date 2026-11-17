@@ -105,11 +105,21 @@ class Prefs(context: Context) {
         get() = bool(KEY_TWO_PAGE, false)
         set(v) = put(KEY_TWO_PAGE, v)
 
+    /** Display the first page (cover) alone in two-page spread mode so facing pages align. */
+    var coverSolo: Boolean
+        get() = bool(KEY_COVER_SOLO, true)
+        set(v) = put(KEY_COVER_SOLO, v)
+
+    /** Show a compact page, battery and clock status pill when bars are hidden in fullscreen. */
+    var readerHud: Boolean
+        get() = bool(KEY_READER_HUD, true)
+        set(v) = put(KEY_READER_HUD, v)
+
     var nightFilter: Boolean
         get() = bool(KEY_NIGHT, false)
         set(v) = put(KEY_NIGHT, v)
 
-    /** Trim blank borders from pages in paged and vertical modes. */
+    /** Trim blank borders from pages in paged/vertical modes and excessive vertical whitespace in long strip. */
     var autoCrop: Boolean
         get() = bool(KEY_AUTO_CROP, false)
         set(v) = put(KEY_AUTO_CROP, v)
@@ -129,6 +139,11 @@ class Prefs(context: Context) {
         get() = bool(KEY_PER_SERIES, true)
         set(v) = put(KEY_PER_SERIES, v)
 
+    /** Open folders that contain only loose images directly as a multi-page chapter. */
+    var imageFolderAsBook: Boolean
+        get() = bool(KEY_IMAGE_FOLDER_BOOK, true)
+        set(v) = put(KEY_IMAGE_FOLDER_BOOK, v)
+
     // ---------------------------------------------------------------- gestures
 
     var tapZones: Boolean
@@ -138,6 +153,11 @@ class Prefs(context: Context) {
     var volumeKeys: Boolean
         get() = bool(KEY_VOLUME_KEYS, false)
         set(v) = put(KEY_VOLUME_KEYS, v)
+
+    /** When false (default), Volume Down advances to the next page and Volume Up goes back. */
+    var invertVolumeKeys: Boolean
+        get() = bool(KEY_INVERT_VOLUME, false)
+        set(v) = put(KEY_INVERT_VOLUME, v)
 
     var brightnessGesture: Boolean
         get() = bool(KEY_BRIGHTNESS_GESTURE, true)
@@ -270,9 +290,13 @@ class Prefs(context: Context) {
         private const val KEY_RESUME = "pref_resume"
         private const val KEY_ASK_RESUME = "pref_ask_resume"
         private const val KEY_TWO_PAGE = "pref_two_page"
+        private const val KEY_COVER_SOLO = "pref_cover_solo"
+        private const val KEY_READER_HUD = "pref_reader_hud"
+        private const val KEY_IMAGE_FOLDER_BOOK = "pref_image_folder_book"
         private const val KEY_NIGHT = "pref_night"
         private const val KEY_TAP_ZONES = "pref_tap_zones"
         private const val KEY_VOLUME_KEYS = "pref_volume_keys"
+        private const val KEY_INVERT_VOLUME = "pref_invert_volume"
         private const val KEY_BRIGHTNESS_GESTURE = "pref_brightness_gesture"
         private const val KEY_DOUBLE_TAP = "pref_double_tap"
         private const val KEY_CHOP_EXIT = "pref_chop_exit"
@@ -297,20 +321,14 @@ class Prefs(context: Context) {
             KEY_FILTER, KEY_PRELOAD, KEY_COLUMNS, KEY_SORT, KEY_SORT_DIR
         )
         private val BOOLEAN_KEYS = setOf(
-            KEY_DYNAMIC_COLOR, KEY_FULLSCREEN, KEY_KEEP_ON, KEY_AUTO_NEXT, KEY_RESUME, KEY_ASK_RESUME, KEY_TWO_PAGE,
-            KEY_NIGHT, KEY_TAP_ZONES, KEY_VOLUME_KEYS, KEY_BRIGHTNESS_GESTURE, KEY_DOUBLE_TAP,
+            KEY_DYNAMIC_COLOR, KEY_FULLSCREEN, KEY_KEEP_ON, KEY_AUTO_NEXT, KEY_RESUME, KEY_ASK_RESUME,
+            KEY_TWO_PAGE, KEY_COVER_SOLO, KEY_READER_HUD, KEY_IMAGE_FOLDER_BOOK,
+            KEY_NIGHT, KEY_TAP_ZONES, KEY_VOLUME_KEYS, KEY_INVERT_VOLUME, KEY_BRIGHTNESS_GESTURE, KEY_DOUBLE_TAP,
             KEY_CHOP_EXIT, KEY_SHOW_HIDDEN, KEY_THUMBS, KEY_GRID, KEY_FILENAMES, KEY_PATHVIEW,
             KEY_LIST_STATUSBAR, KEY_QUICK_FAB, KEY_AUTO_CROP, KEY_PER_SERIES
         )
         private val INTEGER_KEYS = setOf(KEY_BRIGHTNESS, KEY_SPACING, KEY_CHOP_SENSITIVITY, KEY_AUTO_SPEED)
 
-        private val KNOWN_KEYS = setOf(
-            KEY_THEME, KEY_LOCALE, KEY_CHARSET, KEY_DYNAMIC_COLOR, KEY_FULLSCREEN, KEY_KEEP_ON, KEY_READING_DIR,
-            KEY_PAGE_MODE, KEY_FIT, KEY_FILTER, KEY_BRIGHTNESS, KEY_SPACING, KEY_AUTO_NEXT,
-            KEY_RESUME, KEY_ASK_RESUME, KEY_TWO_PAGE, KEY_NIGHT, KEY_TAP_ZONES, KEY_VOLUME_KEYS,
-            KEY_BRIGHTNESS_GESTURE, KEY_DOUBLE_TAP, KEY_CHOP_EXIT, KEY_CHOP_SENSITIVITY, KEY_SHOW_HIDDEN, KEY_THUMBS, KEY_GRID,
-            KEY_COLUMNS, KEY_SORT, KEY_SORT_DIR, KEY_FILENAMES, KEY_PATHVIEW, KEY_LIST_STATUSBAR,
-            KEY_QUICK_FAB, KEY_AUTO_CROP, KEY_PRELOAD, KEY_AUTO_SPEED, KEY_PER_SERIES
-        )
+        private val KNOWN_KEYS = STRING_KEYS + BOOLEAN_KEYS + INTEGER_KEYS
     }
 }
