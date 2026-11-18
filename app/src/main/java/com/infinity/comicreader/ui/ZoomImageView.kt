@@ -45,7 +45,7 @@ class ZoomImageView @JvmOverloads constructor(
     var onTap: ((Float) -> Unit)? = null
 
     /** Vertical drag on the left third of the view (used for the brightness gesture). */
-    var onLeftVerticalDrag: ((Float) -> Unit)? = null
+    var onVerticalDrag: ((Float) -> Unit)? = null
 
     var doubleTapEnabled = true
 
@@ -267,7 +267,7 @@ class ZoomImageView @JvmOverloads constructor(
                 lastX = event.x
                 lastY = event.y
                 dragging = false
-                leftDragActive = onLeftVerticalDrag != null && !canPan() && event.x < width * 0.2f
+                leftDragActive = onVerticalDrag != null && !canPan() && event.x < width * 0.2f
                 parent?.requestDisallowInterceptTouchEvent(canPan())
             }
             MotionEvent.ACTION_MOVE -> handleMove(event)
@@ -303,7 +303,7 @@ class ZoomImageView @JvmOverloads constructor(
                 imageMatrix = matrix
             } else if (leftDragActive && abs(dy) > abs(dx) * 1.5f && abs(dy) > 6f) {
                 parent?.requestDisallowInterceptTouchEvent(true)
-                onLeftVerticalDrag?.invoke(-dy / height.coerceAtLeast(1))
+                onVerticalDrag?.invoke(-dy / height.coerceAtLeast(1))
             } else if (abs(dx) > 8f || abs(dy) > 8f) {
                 parent?.requestDisallowInterceptTouchEvent(false)
             }

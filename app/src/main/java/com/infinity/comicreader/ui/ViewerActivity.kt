@@ -1253,7 +1253,11 @@ class ViewerActivity : AppCompatActivity() {
             R.id.menu_dir_rtl to { setReadingDir("rtl") },
             R.id.menu_orient_default to { setOrientationLock(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) },
             R.id.menu_orient_portrait to { setOrientationLock(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) },
-            R.id.menu_orient_landscape to { setOrientationLock(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) }
+            R.id.menu_orient_landscape to { setOrientationLock(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) },
+            R.id.menu_submenu_back_display to { reopenOptionsMenu() },
+            R.id.menu_submenu_back_filters to { reopenOptionsMenu() },
+            R.id.menu_submenu_back_reading to { reopenOptionsMenu() },
+            R.id.menu_submenu_back_page_tools to { reopenOptionsMenu() }
         )
     }
 
