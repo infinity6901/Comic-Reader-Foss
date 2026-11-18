@@ -412,26 +412,31 @@ class ViewerActivity : AppCompatActivity() {
         vertical.layoutManager = LinearLayoutManager(this)
     }
 
-    /** Ensures toolbar, bottom bar and HUD clear system bars and camera cutouts. */
+    /** Ensures toolbar clears the camera cutout while bottom bar and HUD sit flush near the bottom edge in fullscreen. */
     private fun setupWindowInsets() {
         val root = findViewById<View>(R.id.viewer_root)
         val density = resources.displayMetrics.density
         val baseMargin = (10 * density).toInt()
-        val hudMargin = (12 * density).toInt()
+        val hudMarginX = (10 * density).toInt()
+        val hudMarginY = (8 * density).toInt()
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, windowInsets ->
-            val insets = windowInsets.getInsetsIgnoringVisibility(
-                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
-            )
-            toolbar.setPadding(insets.left, insets.top, insets.right, 0)
+            val cutout = windowInsets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.displayCutout())
+            val sysBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val topInset = if (prefs.fullscreen) cutout.top else maxOf(cutout.top, sysBars.top)
+            val bottomInset = if (prefs.fullscreen) cutout.bottom else maxOf(cutout.bottom, sysBars.bottom)
+            val leftInset = maxOf(cutout.left, if (prefs.fullscreen) 0 else sysBars.left)
+            val rightInset = maxOf(cutout.right, if (prefs.fullscreen) 0 else sysBars.right)
+
+            toolbar.setPadding(leftInset, topInset, rightInset, 0)
             (bottomBar.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp ->
-                lp.leftMargin = baseMargin + insets.left
-                lp.rightMargin = baseMargin + insets.right
-                lp.bottomMargin = baseMargin + insets.bottom
+                lp.leftMargin = baseMargin + leftInset
+                lp.rightMargin = baseMargin + rightInset
+                lp.bottomMargin = baseMargin + bottomInset
                 bottomBar.layoutParams = lp
             }
             (hudView.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp ->
-                lp.rightMargin = hudMargin + insets.right
-                lp.bottomMargin = hudMargin + insets.bottom
+                lp.rightMargin = hudMarginX + rightInset
+                lp.bottomMargin = hudMarginY + bottomInset
                 hudView.layoutParams = lp
             }
             WindowInsetsCompat.CONSUMED
@@ -1081,6 +1086,7 @@ class ViewerActivity : AppCompatActivity() {
     private fun toggleKeepOn() = setKeepOn(!keepOn)
 
     private fun setFullscreen(enabled: Boolean) {
+        prefs.fullscreen = enabled
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         if (enabled) {
             controller.hide(WindowInsetsCompat.Type.systemBars())
@@ -1089,7 +1095,7 @@ class ViewerActivity : AppCompatActivity() {
         } else {
             controller.show(WindowInsetsCompat.Type.systemBars())
         }
-        prefs.fullscreen = enabled
+        ViewCompat.requestApplyInsets(findViewById(R.id.viewer_root))
         updateHud()
         invalidateOptionsMenu()
     }
