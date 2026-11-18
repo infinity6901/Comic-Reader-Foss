@@ -73,17 +73,15 @@ object BitmapUtils {
     }
 
     /**
-     * Reads just the image header from [input] via a capped stream; decoders stop after
-     * the header when only bounds are requested.
+     * Reads only the image header from [input] via [BitmapFactory.decodeStream]
+     * with `inJustDecodeBounds = true`, avoiding buffering up to 96 MB just to
+     * inspect width and height.
      */
     fun boundsStream(input: InputStream): IntArray? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeStream(CappedInputStream(input, MAX_ENTRY_BYTES), null, bounds)
         return sizeOf(bounds)
     }
-
-    /** Reads [input] fully, but refuses to buffer more than [MAX_ENTRY_BYTES]. */
-    fun readBytes(input: InputStream): ByteArray = readCapped(input)
 
     private class CappedInputStream(
         delegate: InputStream,
@@ -107,6 +105,7 @@ object BitmapUtils {
         }
     }
 
+    /** Reads [input] fully, but refuses to buffer more than [MAX_ENTRY_BYTES]. */
     private fun readCapped(input: InputStream): ByteArray {
         val out = ByteArrayOutputStream(64 * 1024)
         val buf = ByteArray(64 * 1024)
@@ -159,6 +158,11 @@ object BitmapUtils {
             abs(Color.green(a) - Color.green(b)) > tol ||
             abs(Color.blue(a) - Color.blue(b)) > tol
 
+    /**
+     * Trims uniform borders (the colour found in the corners) from [src]. Returns
+     * [src] itself when there is nothing worth trimming, when the page has no
+     * consistent border colour, or when the result would be implausibly small.
+     */
     fun autoCrop(src: Bitmap): Bitmap {
         val w = src.width
         val h = src.height
@@ -246,6 +250,7 @@ object BitmapUtils {
             return true
         }
 
+        // Identify slices [startY, endYExclusive) to keep
         val slices = ArrayList<IntArray>()
         var y = 0
         while (y < h) {

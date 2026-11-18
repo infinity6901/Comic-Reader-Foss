@@ -66,6 +66,10 @@ android {
     lint {
         abortOnError = false
         checkReleaseBuilds = false
+        checkTestSources = false
+        htmlReport = true
+        xmlReport = true
+        textReport = true
     }
 
     compileOptions {

@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ComicReader</string>
     <string name="settings">Settings</string>
@@ -10,14 +11,10 @@
     <string name="sheet_save">Save page</string>
     <string name="about">About</string>
     <string name="about_version_format">%1$s %2$s</string>
-
-    <!-- ===================== Bottom tabs ===================== -->
     <string name="tab_browse">Browse</string>
     <string name="tab_favorites">Favorites</string>
     <string name="tab_history">History</string>
     <string name="tab_bookmarks">Bookmarks</string>
-
-    <!-- ===================== List screen ===================== -->
     <string name="menu_favorites">Favorites</string>
     <string name="menu_history">History</string>
     <string name="menu_bookmarks">Bookmarks</string>
@@ -37,11 +34,6 @@
     <string name="menu_rename">Rename</string>
     <string name="menu_refresh">Refresh</string>
     <string name="menu_new_folder">New folder</string>
-    <string name="menu_storage">Switch storage…</string>
-    <string name="storage_internal">Internal storage</string>
-    <string name="storage_external">External storage %1$d</string>
-    <string name="menu_read_folder">Read folder as chapter</string>
-    <string name="menu_browse_folder">Browse image files</string>
     <string name="menu_show_hidden">Show hidden files</string>
     <string name="menu_hide_hidden">Hide hidden files</string>
     <string name="menu_columns">Grid columns</string>
@@ -83,7 +75,6 @@
     <string name="cleanup_nothing">Nothing found</string>
     <string name="invalid_name">That name is not allowed</string>
     <string name="op_failed">Operation failed</string>
-
     <string name="empty_folder">Empty folder</string>
     <string name="no_history">Nothing read yet</string>
     <string name="no_favorites">No favorites yet</string>
@@ -113,8 +104,6 @@
     <string name="open_location_failed">The file is no longer there</string>
     <string name="recent">Recent</string>
     <string name="recent_desc">Go to the folder of the last chapter you read</string>
-
-    <!-- ===================== Viewer ===================== -->
     <string name="menu_fit">Fit</string>
     <string name="menu_fit_screen">Fit screen</string>
     <string name="menu_fit_width">Fit width</string>
@@ -136,8 +125,6 @@
     <string name="menu_reading_dir">Reading direction</string>
     <string name="menu_page_mode">Page mode</string>
     <string name="menu_fullscreen">Fullscreen</string>
-    <string name="menu_reader_hud">Show mini HUD in fullscreen</string>
-    <string name="pref_reader_hud_desc">Show a compact page, battery and clock pill when reader bars are hidden</string>
     <string name="menu_jump">Go to page…</string>
     <string name="menu_orientation">Orientation lock</string>
     <string name="menu_next_chapter">Next chapter</string>
@@ -147,27 +134,9 @@
     <string name="menu_page_spacing">Page spacing</string>
     <string name="menu_brightness">Brightness</string>
     <string name="menu_spread">Two-page spread</string>
-    <string name="menu_cover_solo">Solo cover page</string>
-    <string name="pref_cover_solo_desc">Show the first page alone in two-page spread mode so facing pages align</string>
     <string name="menu_crop">Crop page</string>
     <string name="menu_auto_crop">Auto-crop margins</string>
     <string name="menu_chapters">Chapter list…</string>
-    <string name="menu_comic_info">Comic info</string>
-    <string name="info_title">Title</string>
-    <string name="info_series">Series</string>
-    <string name="info_writer">Writer</string>
-    <string name="info_artist">Artist</string>
-    <string name="info_genre">Genre</string>
-    <string name="info_dimensions">Dimensions</string>
-    <string name="info_path">Path</string>
-    <string name="menu_sleep_timer">Sleep timer</string>
-    <string name="sleep_timer_off">Off</string>
-    <string name="sleep_timer_minutes">%1$d minutes</string>
-    <string name="sleep_timer_active">Sleep · %1$d min</string>
-    <string name="sleep_timer_set">Sleep timer set for %1$d minutes</string>
-    <string name="sleep_timer_cancelled">Sleep timer turned off</string>
-    <string name="sleep_timer_one_min">Sleep timer: 1 minute remaining</string>
-    <string name="sleep_timer_expired">Sleep timer finished — progress saved</string>
     <string name="menu_auto_scroll">Auto-scroll</string>
     <string name="menu_auto_next">Auto next chapter</string>
     <string name="menu_auto_speed">Auto-scroll speed…</string>
@@ -189,7 +158,6 @@
     <string name="series_saved">Mode, direction, fit and spread are now remembered for this folder</string>
     <string name="series_cleared">This folder now uses the default layout</string>
     <string name="chapters_title">Chapters</string>
-
     <string name="reading_ltr">Left to right</string>
     <string name="reading_rtl">Right to left</string>
     <string name="previous_page">Previous page</string>
@@ -200,7 +168,6 @@
     <string name="orientation_default">System</string>
     <string name="orientation_portrait">Portrait</string>
     <string name="orientation_landscape">Landscape</string>
-
     <string name="bookmark_saved">Bookmark saved</string>
     <string name="bookmark_removed">Bookmark removed</string>
     <string name="no_bookmarks_in_book">No bookmarks in this book</string>
@@ -211,7 +178,6 @@
     <string name="clear">Clear</string>
     <string name="close">Close</string>
     <string name="save">Save</string>
-
     <string name="chapter_end_title">End of chapter</string>
     <string name="chapter_end_msg">You finished “%1$s”.</string>
     <string name="open_next_chapter">Next chapter</string>
@@ -219,14 +185,11 @@
     <string name="no_next_chapter">No next chapter in this folder</string>
     <string name="no_prev_chapter">No previous chapter in this folder</string>
     <string name="finished_last_chapter">That was the last chapter in this folder</string>
-
     <string name="str_filter_none">None</string>
     <string name="str_filter_invert">Invert</string>
     <string name="str_filter_grayscale">Grayscale</string>
     <string name="str_filter_contrast">High contrast</string>
     <string name="str_filter_sepia">Sepia</string>
-
-    <!-- ===================== Crop / pages ===================== -->
     <string name="crop_title">Crop page</string>
     <string name="crop_save">Save</string>
     <string name="crop_rotate">Rotate</string>
@@ -237,21 +200,17 @@
     <string name="page_load_failed">Could not load this page. Tap to retry.</string>
     <string name="menu_two_page">Two-page spread</string>
     <string name="menu_pages">Page thumbnails</string>
-
-    <!-- ===================== Settings ===================== -->
     <string name="pref_cat_general">General</string>
     <string name="pref_cat_appearance">Appearance</string>
     <string name="pref_cat_reader">Reader</string>
     <string name="pref_cat_gestures">Gestures &amp; controls</string>
     <string name="pref_cat_list">Library</string>
     <string name="pref_cat_cache">Storage &amp; cache</string>
-
     <string name="pref_theme">Theme</string>
     <string name="pref_dynamic_color">Material You colors</string>
     <string name="pref_dynamic_color_desc">Use your wallpaper colors on Android 12 and newer. Older versions keep the built-in palette.</string>
     <string name="pref_language">Language</string>
     <string name="pref_charset">Archive filename charset</string>
-
     <string name="pref_fullscreen">Start in fullscreen</string>
     <string name="pref_keep_on">Keep the screen on while reading</string>
     <string name="pref_reading_dir">Default reading direction</string>
@@ -266,18 +225,15 @@
     <string name="pref_ask_resume">Ask where to start</string>
     <string name="pref_ask_resume_desc">Ask whether to resume or start from the first page when a chapter has saved progress</string>
     <string name="pref_two_page">Two-page spread</string>
-
     <string name="pref_tap_zones">Enable tap zones</string>
     <string name="pref_tap_zones_desc">Tap the left/right edges to turn pages</string>
     <string name="pref_volume_keys">Use volume keys to turn pages</string>
-    <string name="pref_invert_volume">Invert volume key direction</string>
     <string name="pref_brightness_gesture">Swipe vertically to change brightness</string>
     <string name="pref_double_tap">Double-tap to zoom</string>
     <string name="pref_chop_sensitivity">Chop sensitivity</string>
     <string name="pref_chop_sensitivity_desc">Higher reacts to a lighter chop. Raise it if the exit does not trigger, lower it if it triggers by accident</string>
     <string name="pref_chop_exit">Chop-chop to exit</string>
     <string name="pref_chop_exit_desc">Give the phone a quick chop-chop motion to close the reader and leave the app instantly</string>
-
     <string name="pref_show_hidden">Show hidden files</string>
     <string name="pref_thumbs">Show page thumbnails</string>
     <string name="pref_grid">Use grid view</string>
@@ -288,13 +244,10 @@
     <string name="pref_list_pathview">Show path bar</string>
     <string name="pref_list_statusbar">Show status bar in the library</string>
     <string name="pref_list_quickfab">Show the list/grid button</string>
-
     <string name="pref_cat_data">Your data</string>
-    <string name="pref_auto_crop_desc">Trim blank borders in paged/vertical modes and compress excessive vertical whitespace in long strip</string>
+    <string name="pref_auto_crop_desc">Trim blank borders in paged and vertical modes</string>
     <string name="pref_per_series">Per-folder layout</string>
     <string name="pref_per_series_desc">Let the reader menu remember mode, direction, fit and spread for a folder</string>
-    <string name="pref_image_folder_book">Open image folders as chapters</string>
-    <string name="pref_image_folder_book_desc">Tapping a folder that contains only loose images opens it directly in the reader as a multi-page chapter</string>
     <string name="pref_preload">Preload pages</string>
     <string name="pref_auto_speed">Auto-scroll speed</string>
     <string name="pref_backup">Export backup</string>
@@ -312,20 +265,15 @@
     <string name="pref_reset_done">Settings were reset.</string>
     <string name="pref_cleared">Done.</string>
     <string name="pref_cleared_thumbs">Thumbnail cache cleared.</string>
-
     <string name="sort_name">Name</string>
     <string name="sort_size">Size</string>
     <string name="sort_date">Date</string>
     <string name="sort_type">Type</string>
     <string name="sort_recent">Recently read</string>
-
-    <!-- ===================== About ===================== -->
-    <string name="about_desc">A clean, private, ad-free comic &amp; PDF reader. Opens images, image folders, ZIP/CBZ, RAR/CBR, 7z/CB7 and PDF — entirely offline.</string>
+    <string name="about_desc">A clean, private, ad-free comic &amp; PDF reader. Opens images, ZIP/CBZ, RAR/CBR, 7z/CB7 and PDF — entirely offline.</string>
     <string name="about_credits">Archive support by junrar and Apache Commons Compress. PDF rendering via the Android platform PdfRenderer. Icons by Material Symbols.</string>
     <string name="about_tagline">Read without the noise.</string>
     <string name="about_license">Free and open source software, released under the MIT License.</string>
-
-    <!-- ===================== Arrays ===================== -->
     <string-array name="sort_entries">
         <item>@string/sort_name</item>
         <item>@string/sort_size</item>
@@ -340,7 +288,6 @@
         <item>type</item>
         <item>recent</item>
     </string-array>
-
     <string-array name="sort_dir_entries">
         <item>@string/menu_ascending</item>
         <item>@string/menu_descending</item>
@@ -349,7 +296,6 @@
         <item>asc</item>
         <item>desc</item>
     </string-array>
-
     <string-array name="theme_entries">
         <item>System</item>
         <item>Light</item>
@@ -360,18 +306,17 @@
         <item>light</item>
         <item>dark</item>
     </string-array>
-
     <string-array name="locale_entries">
         <item>System default</item>
         <item>English</item>
-        <item>Korean (한국어)</item>
-        <item>Japanese (日本語)</item>
-        <item>Chinese (简体中文)</item>
-        <item>Russian (Русский)</item>
-        <item>Spanish (Español)</item>
-        <item>Portuguese (Português)</item>
-        <item>French (Français)</item>
-        <item>German (Deutsch)</item>
+        <item>Korean</item>
+        <item>Japanese</item>
+        <item>Chinese (Simplified)</item>
+        <item>Russian</item>
+        <item>Spanish</item>
+        <item>Portuguese</item>
+        <item>French</item>
+        <item>German</item>
     </string-array>
     <string-array name="locale_values">
         <item>system</item>
@@ -385,7 +330,6 @@
         <item>fr</item>
         <item>de</item>
     </string-array>
-
     <string-array name="charset_entries">
         <item>UTF-8</item>
         <item>CP949 (Korean)</item>
@@ -400,7 +344,6 @@
         <item>GBK</item>
         <item>windows-1251</item>
     </string-array>
-
     <string-array name="reading_dir_entries">
         <item>@string/reading_ltr</item>
         <item>@string/reading_rtl</item>
@@ -409,7 +352,6 @@
         <item>ltr</item>
         <item>rtl</item>
     </string-array>
-
     <string-array name="page_mode_entries">
         <item>@string/page_mode_paged</item>
         <item>@string/page_mode_vertical</item>
@@ -420,7 +362,6 @@
         <item>vertical</item>
         <item>longstrip</item>
     </string-array>
-
     <string-array name="fit_entries">
         <item>@string/menu_fit_screen</item>
         <item>@string/menu_fit_width</item>
@@ -433,7 +374,6 @@
         <item>height</item>
         <item>stretch</item>
     </string-array>
-
     <string-array name="filter_entries">
         <item>@string/str_filter_none</item>
         <item>@string/str_filter_invert</item>
@@ -448,7 +388,6 @@
         <item>contrast</item>
         <item>sepia</item>
     </string-array>
-
     <string-array name="columns_entries">
         <item>Auto</item>
         <item>2</item>
@@ -465,7 +404,6 @@
         <item>5</item>
         <item>6</item>
     </string-array>
-
     <string-array name="preload_entries">
         <item>Off</item>
         <item>1 page</item>
@@ -480,4 +418,32 @@
         <item>4</item>
         <item>6</item>
     </string-array>
+    <string name="menu_storage">Switch storage…</string>
+    <string name="storage_internal">Internal storage</string>
+    <string name="storage_external">External storage %1$d</string>
+    <string name="menu_read_folder">Read folder as chapter</string>
+    <string name="menu_browse_folder">Browse image files</string>
+    <string name="menu_reader_hud">Show mini HUD in fullscreen</string>
+    <string name="pref_reader_hud_desc">Show a compact page, battery and clock pill when reader bars are hidden</string>
+    <string name="menu_cover_solo">Solo cover page</string>
+    <string name="pref_cover_solo_desc">Show the first page alone in two-page spread mode so facing pages align</string>
+    <string name="menu_comic_info">Comic info</string>
+    <string name="info_title">Title</string>
+    <string name="info_series">Series</string>
+    <string name="info_writer">Writer</string>
+    <string name="info_artist">Artist</string>
+    <string name="info_genre">Genre</string>
+    <string name="info_dimensions">Dimensions</string>
+    <string name="info_path">Path</string>
+    <string name="menu_sleep_timer">Sleep timer</string>
+    <string name="sleep_timer_off">Off</string>
+    <string name="sleep_timer_minutes">%1$d minutes</string>
+    <string name="sleep_timer_active">Sleep · %1$d min</string>
+    <string name="sleep_timer_set">Sleep timer set for %1$d minutes</string>
+    <string name="sleep_timer_cancelled">Sleep timer turned off</string>
+    <string name="sleep_timer_one_min">Sleep timer: 1 minute remaining</string>
+    <string name="sleep_timer_expired">Sleep timer finished — progress saved</string>
+    <string name="pref_invert_volume">Invert volume key direction</string>
+    <string name="pref_image_folder_book">Open image folders as chapters</string>
+    <string name="pref_image_folder_book_desc">Tapping a folder that contains only loose images opens it directly in the reader as a multi-page chapter</string>
 </resources>

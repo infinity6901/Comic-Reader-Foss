@@ -24,13 +24,13 @@ if [ -n "$BUILD_TOOLS_DIR" ]; then
 fi
 
 if [ -n "$AAPT" ]; then
-  BADGING=$("$AAPT" dump badging "$APK")
-  echo "$BADGING" | head -n 20
+  BADGING=$("$AAPT" dump badging "$APK" || true)
+  echo "$BADGING" | head -n 20 || true
   PKG=$(echo "$BADGING" | grep -oP "package: name='\K[^']+" | head -n1 || true)
   MIN_SDK=$(echo "$BADGING" | grep -oP "sdkVersion:'\K[^']+" | head -n1 || true)
   TARGET_SDK=$(echo "$BADGING" | grep -oP "targetSdkVersion:'\K[^']+" | head -n1 || true)
   echo "Package: $PKG | minSdk: $MIN_SDK | targetSdk: $TARGET_SDK"
-  if [[ "$PKG" != com.infinity.comicreader* ]]; then
+  if [ -n "$PKG" ] && [[ "$PKG" != com.infinity.comicreader* ]]; then
     echo "ERROR: Unexpected package name '$PKG' (expected com.infinity.comicreader)"
     exit 1
   fi

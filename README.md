@@ -162,7 +162,13 @@ $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 
 ### Release signing
 
-Set the `KEYSTORE_FILE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD` environment variables to sign debug and release builds with your own stable key (this is what CI does from repository secrets; see [docs/SIGNING.md](docs/SIGNING.md)). Without them Gradle's per-machine debug key is used.
+The release variant uses Gradle's standard `debug` signing configuration so the
+APK can be installed directly without a private keystore or GitHub Actions
+secrets. GitHub-hosted runners are ephemeral and may generate different debug
+keys between runs. Consequently, a release APK from a later CI run may not update
+an installation from an earlier run; uninstalling first may erase local app data.
+For durable public distribution and seamless upgrades, use a stable private
+release key and protect it securely.
 
 Release uses `isMinifyEnabled = true` + `isShrinkResources = true` (R8). The
 proguard rules keep junrar and commons-compress whole so the reflection paths in
@@ -236,15 +242,4 @@ The current maintenance update improves bitmap lifetime management during auto-c
 
 ## Automated Android builds
 
-GitHub Actions builds the debug and optimized release APKs, runs unit tests and lint, and uploads APK artifacts. Pushing a tag beginning with `v` (for example, `v2.2.0`) also publishes those APKs to a GitHub Release. See [docs/CI_RELEASES.md](docs/CI_RELEASES.md) for instructions and signing limitations. CI signs debug and release APKs with a stable key from repository secrets; see [docs/SIGNING.md](docs/SIGNING.md).
-
-
-## What's New in v2.4
-- **Solo Cover Page** in Dual-Page Spread mode (`coverSolo`)
-- **Fullscreen Mini HUD** (page indicator, battery %, and clock when toolbars are hidden)
-- **Image Folder as Book/Chapter** (`FolderImageSource`)
-- **`ComicInfo.xml` Metadata Dialog** for `.cbz`, `.cbr`, and `.cb7` archives
-- **Long Strip Vertical Gap Compression** when Auto-trim is enabled
-- **Reader Sleep Timer** & **Invert Volume Keys** setting
-- **Complete 8-Language Localization** (`ko`, `ja`, `zh-CN`, `ru`, `es`, `pt`, `fr`, `de`)
-- **All 28 v2.4 Audit Fixes** across concurrency, memory, crop tool, spread stepping, and CI signing security
+GitHub Actions builds the debug and optimized release APKs, runs unit tests and lint, and uploads APK artifacts. Pushing a tag beginning with `v` (for example, `v2.2.0`) also publishes those APKs to a GitHub Release. See [docs/CI_RELEASES.md](docs/CI_RELEASES.md) for instructions and signing limitations. The release APK produced by CI is signed with a generated debug key for testing only, not production distribution.

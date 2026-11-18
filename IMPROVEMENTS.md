@@ -1,233 +1,41 @@
-# ComicReader — v2.4 Overhaul & Audit Fixes (`versionCode = 15`)
-
-## 1. Regressions Introduced in v2.2 / v2.3 Fixed
-- **Backward Overswipe Guard (`ViewerActivity.kt`, `ZoomImageView.kt`)**: Required `prefs.autoNext` on backward overswipe at page 0 and aborted overswipe tracking whenever any visible `ZoomImageView` is zoomed (`scale > 1.02f`) or multi-touch (`pointerCount > 1`) is active.
-- **Reverse Chapter Transition (`LAST_PAGE`) Race & EndCard Fix (`ViewerActivity.kt`)**: Consumed `EXTRA_PAGE = LAST_PAGE` from `intent` immediately (`intent.removeExtra(EXTRA_PAGE)`) so rotation/recreation does not snap back to the end, set `endDismissed = arrivedFromNextChapter` so arriving at the bottom of a previous chapter does not immediately pop up the "Chapter complete" overlay, and deferred `prepareStripAhead()` until `alignStripBottom()` finishes.
-- **Debug vs. Stable Signing Isolation (`app/build.gradle.kts`)**: Restored default debug signing and added `applicationIdSuffix = ".debug"` + `versionNameSuffix = "-debug"` on the `debug` buildType while keeping `signingConfig = signingConfigs.getByName("stable")` on `release`.
-- **GitHub Actions Secret Scoping (`.github/workflows/android-build-release.yml`)**: Scoped `SIGNING_*` credentials to the `Build release APK and AAB` step environment instead of writing plaintext passwords to `$GITHUB_ENV`.
-
-## 2. Reader, UI, Memory & Concurrency Fixes (24 Issues)
-- **Spread Navigation & Solo Cover Page (`SpreadLayout.kt`, `PageAdapter.kt`, `ViewerActivity.kt`)**: Added `coverSolo` support so page 1 displays centered by itself before 2-page pairing begins (`[0], [1,2], [3,4]`), fixed manual spread stepping (`stepPage()`) to advance by full spread items, and hid unused spread half-cells (`View.GONE`) so solo covers and odd final pages center cleanly.
-- **Crop Tool Precision & State Preservation (`CropView.kt`, `CropActivity.kt`, `ViewerActivity.kt`, `activity_crop.xml`)**: Fixed squared density (`density * density` -> `density`), fixed right/bottom handle inversion in `normalize()`, preserved normalized crop rects across `onSizeChanged()`, wrapped `crop_view` and `crop_progress` in a `FrameLayout`, added a Reset button (`crop_reset`), and recycled temporary bitmaps in `startCrop()` and `CropActivity.onDestroy()`.
-- **Unread Start Prompt & Long Strip Seamless Roll (`ViewerActivity.kt`)**: Added `awaitingStartChoice` guard so `askStartPage()` does not mark unread chapters as read before the user chooses, and switched Long Strip seamless roll detection to `findFirstVisibleItemPosition() >= chapterPages()` while keeping `intent` extras updated.
-- **Cover Progress Bar & Badge Layout (`item_book_grid.xml`, `item_book_list.xml`)**: Added `android:clipToOutline="true"` on the cover container so `@id/cover_progress` clips to rounded corners and raised `@id/badge` bottom margin so it never collides with `@id/cover_progress`.
-- **Toolbar Title, Display Cutouts & Volume Keys (`ViewerActivity.kt`, `themes.xml`)**: Re-applied `setChapterTitle()` in `onPostCreate()`, added `WindowInsetsCompat` padding/margins and `shortEdges` cutout mode, mirrored `viewer_seek` in RTL mode, and made `VOLUME_UP` = previous page / `VOLUME_DOWN` = next page by default with an **Invert volume keys** toggle and smooth scrolling in Long Strip mode.
-- **Thread-Safe Archive & PDF PageSources (`ZipSource.kt`, `RarSource.kt`, `SevenZipSource.kt`, `PdfSource.kt`, `BitmapUtils.kt`)**: Added `@Synchronized` and `closed` guards across `loadPage()`, `pageSize()`, `comicInfo()`, and `close()`, switched RAR/7z `pageSize()` to header-only `BitmapUtils.boundsStream()`, and raised the tall-strip pixel budget (`20 MP` up to `8192 px` tall) so webtoon strips stay crisp.
-- **In-Memory Library Cache & Non-Blocking Random Unread (`Library.kt`, `ListActivity.kt`)**: Replaced duplicate raw JSON string caching with typed in-memory collections synchronized under `LOCK`, refreshed all 4 library tabs in `ListActivity.onResume()`, enriched Bookmarks with file size, notes, edit-note, and open-location actions, and moved `openRandomUnread()` to `AppDispatchers.io`.
-- **Manifest, R8 & Localization Completeness (`AndroidManifest.xml`, `proguard-rules.pro`, `res/values-*/strings.xml`)**: Added `READ_MEDIA_IMAGES`, `.cbz`/`.cbr`/`.cb7` MIME & `application/octet-stream` path filters, `-keep class org.tukaani.xz.** { *; }`, stripped all UTF-8 BOMs, and added complete translations for `ko`, `ja`, `zh-rCN`, `ru`, `es`, `pt`, `fr`, and `de`.
-
-## 3. New Features Added in v2.4
-- **Image Folder as Chapter (`FolderImageSource.kt`, `PageSources.kt`, `ListActivity.kt`)**: Treat directories of loose images as readable comic chapters.
-- **Fullscreen Mini HUD (`activity_viewer.xml`, `ViewerActivity.kt`)**: Optional pill overlay showing page progress, battery level, and live 24h clock while Chrome is hidden.
-- **`ComicInfo.xml` Metadata Inspector (`ComicInfo.kt`, `ViewerActivity.kt`)**: Parses embedded `ComicInfo.xml` from `.cbz`, `.cbr`, and `.cb7` archives and displays Title, Series, Number, Credits, Genre, Page Count, and Summary.
-- **Long Strip Whitespace Gap Trimmer (`BitmapUtils.kt`, `PageAdapter.kt`)**: Compresses excessive solid white/black vertical padding (`> 96 px` down to `24 px`) between webtoon panels when Auto-trim borders is enabled in Long Strip mode.
-- **Reader Sleep Timer (`ViewerActivity.kt`)**: Built-in countdown timer (15 / 30 / 45 / 60 / 90 min) with a 1-minute warning snackbar.
-- **Unified Reading Statistics Dialog (`StatsDialog.kt`)**: Consistent 6-row statistics dialog shared between the main toolbar and Settings.
-
-
-# ComicReader — v2.4 Overhaul & Audit Fixes (`versionCode = 15`)
-
-## 1. Regressions Introduced in v2.2 / v2.3 Fixed
-- **Backward Overswipe Guard (`ViewerActivity.kt`, `ZoomImageView.kt`)**: Required `prefs.autoNext` on backward overswipe at page 0 and aborted overswipe tracking whenever any visible `ZoomImageView` is zoomed (`scale > 1.02f`) or multi-touch (`pointerCount > 1`) is active.
-- **Reverse Chapter Transition (`LAST_PAGE`) Race & EndCard Fix (`ViewerActivity.kt`)**: Consumed `EXTRA_PAGE = LAST_PAGE` from `intent` immediately (`intent.removeExtra(EXTRA_PAGE)`) so rotation/recreation does not snap back to the end, set `endDismissed = arrivedFromNextChapter` so arriving at the bottom of a previous chapter does not immediately pop up the "Chapter complete" overlay, and deferred `prepareStripAhead()` until `alignStripBottom()` finishes.
-- **Debug vs. Stable Signing Isolation (`app/build.gradle.kts`)**: Restored default debug signing and added `applicationIdSuffix = ".debug"` + `versionNameSuffix = "-debug"` on the `debug` buildType while keeping `signingConfig = signingConfigs.getByName("stable")` on `release`.
-- **GitHub Actions Secret Scoping (`.github/workflows/android-build-release.yml`)**: Scoped `SIGNING_*` credentials to the `Build release APK and AAB` step environment instead of writing plaintext passwords to `$GITHUB_ENV`.
-
-## 2. Reader, UI, Memory & Concurrency Fixes (24 Issues)
-- **Spread Navigation & Solo Cover Page (`SpreadLayout.kt`, `PageAdapter.kt`, `ViewerActivity.kt`)**: Added `coverSolo` support so page 1 displays centered by itself before 2-page pairing begins (`[0], [1,2], [3,4]`), fixed manual spread stepping (`stepPage()`) to advance by full spread items, and hid unused spread half-cells (`View.GONE`) so solo covers and odd final pages center cleanly.
-- **Crop Tool Precision & State Preservation (`CropView.kt`, `CropActivity.kt`, `ViewerActivity.kt`, `activity_crop.xml`)**: Fixed squared density (`density * density` -> `density`), fixed right/bottom handle inversion in `normalize()`, preserved normalized crop rects across `onSizeChanged()`, wrapped `crop_view` and `crop_progress` in a `FrameLayout`, added a Reset button (`crop_reset`), and recycled temporary bitmaps in `startCrop()` and `CropActivity.onDestroy()`.
-- **Unread Start Prompt & Long Strip Seamless Roll (`ViewerActivity.kt`)**: Added `awaitingStartChoice` guard so `askStartPage()` does not mark unread chapters as read before the user chooses, and switched Long Strip seamless roll detection to `findFirstVisibleItemPosition() >= chapterPages()` while keeping `intent` extras updated.
-- **Cover Progress Bar & Badge Layout (`item_book_grid.xml`, `item_book_list.xml`)**: Added `android:clipToOutline="true"` on the cover container so `@id/cover_progress` clips to rounded corners and raised `@id/badge` bottom margin so it never collides with `@id/cover_progress`.
-- **Toolbar Title, Display Cutouts & Volume Keys (`ViewerActivity.kt`, `themes.xml`)**: Re-applied `setChapterTitle()` in `onPostCreate()`, added `WindowInsetsCompat` padding/margins and `shortEdges` cutout mode, mirrored `viewer_seek` in RTL mode, and made `VOLUME_UP` = previous page / `VOLUME_DOWN` = next page by default with an **Invert volume keys** toggle and smooth scrolling in Long Strip mode.
-- **Thread-Safe Archive & PDF PageSources (`ZipSource.kt`, `RarSource.kt`, `SevenZipSource.kt`, `PdfSource.kt`, `BitmapUtils.kt`)**: Added `@Synchronized` and `closed` guards across `loadPage()`, `pageSize()`, `comicInfo()`, and `close()`, switched RAR/7z `pageSize()` to header-only `BitmapUtils.boundsStream()`, and raised the tall-strip pixel budget (`20 MP` up to `8192 px` tall) so webtoon strips stay crisp.
-- **In-Memory Library Cache & Non-Blocking Random Unread (`Library.kt`, `ListActivity.kt`)**: Replaced duplicate raw JSON string caching with typed in-memory collections synchronized under `LOCK`, refreshed all 4 library tabs in `ListActivity.onResume()`, enriched Bookmarks with file size, notes, edit-note, and open-location actions, and moved `openRandomUnread()` to `AppDispatchers.io`.
-- **Manifest, R8 & Localization Completeness (`AndroidManifest.xml`, `proguard-rules.pro`, `res/values-*/strings.xml`)**: Added `READ_MEDIA_IMAGES`, `.cbz`/`.cbr`/`.cb7` MIME & `application/octet-stream` path filters, `-keep class org.tukaani.xz.** { *; }`, stripped all UTF-8 BOMs, and added complete translations for `ko`, `ja`, `zh-rCN`, `ru`, `es`, `pt`, `fr`, and `de`.
-
-## 3. New Features Added in v2.4
-- **Image Folder as Chapter (`FolderImageSource.kt`, `PageSources.kt`, `ListActivity.kt`)**: Treat directories of loose images as readable comic chapters.
-- **Fullscreen Mini HUD (`activity_viewer.xml`, `ViewerActivity.kt`)**: Optional pill overlay showing page progress, battery level, and live 24h clock while Chrome is hidden.
-- **`ComicInfo.xml` Metadata Inspector (`ComicInfo.kt`, `ViewerActivity.kt`)**: Parses embedded `ComicInfo.xml` from `.cbz`, `.cbr`, and `.cb7` archives and displays Title, Series, Number, Credits, Genre, Page Count, and Summary.
-- **Long Strip Whitespace Gap Trimmer (`BitmapUtils.kt`, `PageAdapter.kt`)**: Compresses excessive solid white/black vertical padding (`> 96 px` down to `24 px`) between webtoon panels when Auto-trim borders is enabled in Long Strip mode.
-- **Reader Sleep Timer (`ViewerActivity.kt`)**: Built-in countdown timer (15 / 30 / 45 / 60 / 90 min) with a 1-minute warning snackbar.
-- **Unified Reading Statistics Dialog (`StatsDialog.kt`)**: Consistent 6-row statistics dialog shared between the main toolbar and Settings.
-
-
 # ComicReader maintenance and overhaul log
+
+## Overhaul v13 (version 2.2, version code 13)
+
+### Bug, logic, concurrency, memory, layout & build fixes
+- **Fixed `CropView` squared density & handle normalization**: Removed the accidental `density * density` multiplication on corner handle radius, hit-test radius, and minimum crop size (`CropView.kt`). Branched `normalize()` by active handle so dragging right/bottom handles inward clamps against `left + minW` / `top + minH` instead of pushing `left`/`top` backward and inverting the selection. Preserved normalized crop coordinates (`[0..1]`) across `onSizeChanged()` and added a Reset button to `CropActivity`.
+- **Fixed two-page spread manual stepping**: Tapping left/right zones, pressing Previous/Next Page buttons, or pressing volume keys in two-page spread mode now steps by a full spread (`SpreadLayout.nextSpreadPage()`) instead of incrementing `currentIndex` by `1` (which left the viewer stuck on the same spread for odd steps).
+- **Fixed reader toolbar title overwrite**: `ViewerActivity` now sets `supportActionBar?.title` and `Activity.title` alongside `toolbar.title`, preventing `AppCompatActivity.onPostCreate()` from overwriting the chapter name with `"ComicReader"`.
+- **Fixed reader window insets & display cutout clipping**: Added a `WindowInsetsCompat` listener for `systemBars() or displayCutout()` on `viewer_root` so `viewer_toolbar`, `viewer_bottom`, and the fullscreen HUD clear status bars, navigation bars, and camera cutouts when fullscreen is toggled off, and enabled `windowLayoutInDisplayCutoutMode="shortEdges"` on `Theme.ComicReader.Viewer`.
+- **Fixed `askStartPage` premature read-marking**: Guarded `onPageChanged()` and `updateEndCard()` with `awaitingStartChoice` while the `"Resume page / First page"` dialog is displayed so chapters with saved progress on their final page are not marked read before the user chooses.
+- **Fixed Long Strip chapter roll viewport jump & recreation state**: `onScrolled` now triggers `commitStripChapter()` only once `findFirstVisibleItemPosition() >= chapterPages()` (when the finished chapter has completely scrolled off the top edge), and updates `intent` + `onSaveInstanceState` so activity recreation keeps the new chapter. `PageAdapter` also updates `learnedAspect` at `pageIndex == base`.
+- **Fixed `ZoomImageView` zoom in `STRETCH` mode & bind flash**: Allowed pinch-to-zoom and double-tap zoom up to `8x` in `FitMode.STRETCH`, and invoked `fit(fitMode)` synchronously in `setImageDrawable()` when view bounds are already known.
+- **Fixed `ViewerActivity.startCrop()` bitmap leak & `CropActivity` cleanup**: Recycled the full-resolution crop source bitmap in a `finally` block after writing `crop_src.png`, and recycled `CropActivity`'s working bitmap in `onDestroy()`.
+- **Fixed `BitmapUtils.boundsStream()` 96 MB full-entry buffering**: `boundsStream()` now decodes only the image header via `BitmapFactory.decodeStream` with `inJustDecodeBounds = true` instead of decompressing the entire archive entry into a `ByteArray`.
+- **Synchronized `PageSource.close()` across all backends**: Added `@Synchronized` and a `closed` state guard to `PdfSource`, `ZipSource`, `RarSource`, and `SevenZipSource`, and moved `close()` calls onto `AppDispatchers.io` so closing a book cannot race with an in-flight background decode or crash `PdfRenderer`.
+- **Cached parsed JSON collections in `Library.kt`**: Cached `favorites`, `read`, `history`, and `bookmarks` in memory under `LOCK` so `isBookmarked()` during page turns and `historyMap()` during search filtering no longer re-parse JSON on the main thread.
+- **Fixed `ListActivity.onResume()`, Bookmarks tab notes, and async `openRandomUnread()`**: `onResume()` now refreshes all tabs (`Browse`, `Favorites`, `History`, `Bookmarks`) and syncs grid/column changes from Settings. `entryForBookmark()` now populates file size, displays bookmark notes in the subtitle, sorts ties by page number, and supports editing notes or opening file locations from the Bookmarks tab. Moved `openRandomUnread()` onto `AppDispatchers.io` with fallback to unread files in the current folder.
+- **Unified Reading Statistics dialog (`StatsDialog.kt`)**: Shared a single `StatsDialog` implementation between `ListActivity` and `SettingsFragment` so daily reading goals, 7-day activity, report sharing, and stats reset are available from both places.
+- **Expanded `AndroidManifest.xml`, ProGuard, keystore & localization**: Added `READ_MEDIA_IMAGES`, standard and `application/octet-stream` `.cbz`/`.cbr`/`.cb7` intent filters (for Telegram and file managers), `-keep class org.tukaani.xz.**`, optional environment-variable release keystore support in `app/build.gradle.kts`, stripped UTF-8 BOMs from 20 XML files, and added localized `strings.xml` resources (`ko`, `ja`, `zh-rCN`, `ru`, `es`, `pt`, `fr`, `de`).
+
+### New features added in v2.2
+- **Multi-page loose image folders (`FolderImageSource`)**: Folders containing only loose images (`001.jpg`, `002.png`, `003.webp`) now open directly as a single multi-page chapter (configurable via *Settings → Reader → Open image folders as chapters*, or via the folder long-press menu), and tapping an individual image inside such a folder opens the whole folder starting at that image.
+- **Solo cover page in Two-Page Spread mode (`coverSolo`)**: Added a *Solo cover page* toggle in the reader sheet, reader menu, and Settings so page 1 stands centered by itself and facing pages (`2–3`, `4–5`) pair accurately; odd final pages also center cleanly.
+- **`ComicInfo.xml` metadata parser & Comic Info dialog (`ComicInfo.kt`)**: Automatically parses embedded `ComicInfo.xml` metadata (Title, Series, Number, Writer, Penciller, Genre, Summary, Year/Month, and Manga RTL flag) from `.cbz`, `.cbr`, and `.cb7` archives and displays it alongside page dimensions and file details via *Comic info*.
+- **Webtoon vertical whitespace reducer & tall-strip clarity boost**: Enabling *Auto-crop margins* in Long Strip mode now compresses excessive uniform blank vertical gutters while preserving full strip width, and `BitmapUtils` raises the pixel budget for tall webtoon strips (`h >= 2w`) so vertical text stays sharp.
+- **Reader Sleep Timer**: Added a configurable sleep timer (`Off`, `15`, `30`, `45`, `60` minutes) in the reader bottom sheet and overflow menu that warns 1 minute before expiry, saves reading progress and statistics, stops auto-scroll, and closes the reader.
+- **Fullscreen Mini HUD pill**: Shows a compact `page / total · battery% · HH:mm` status pill in the bottom corner when the main reader bars are hidden in fullscreen (toggleable in the reader sheet, menu, and Settings).
+- **Standardized volume keys + Invert Volume Keys option**: Volume Down now advances forward (and smoothly scrolls 75% of screen height in Long Strip mode) while Volume Up goes back, with an *Invert volume key direction* toggle in Settings and the reader sheet.
+- **Storage Volume Switcher**: Added *Switch storage…* in the library menu when removable SD card or secondary storage volumes are mounted.
+
+---
 
 ## Overhaul v10 (version 2.0, version code 11)
 
 ### Correctness fixes from the latest code review
-- Fixed continuous/long-strip auto-next indexing: item count now uses the absolute strip end minus the trimmed base, and page binding/prefetch use the absolute end boundary. This prevents appended chapters from becoming an empty strip after earlier segments are dropped.
+- Fixed continuous/long-strip auto-next indexing: item count now uses the absolute strip end minus the trimmed base, and page binding/prefetch use the absolute end boundary.
 - Fixed even-page two-page spread completion checks so reaching the final spread marks the chapter read.
-- Prevented incoming `open with` intents from being replayed during activity recreation, and serialized directory/favorites/history/bookmark listing jobs so stale results cannot overwrite newer tabs. Tab changes cancel deep search and clear browse-only search results.
-- Made history sorting recency-first regardless of the generic library sort preference. Corrected bookmark removal wording and surfaced missing-file labels for stale favorites/bookmarks.
-- Filtered macOS `__MACOSX` and `._*` resource-fork entries from comic archives, sorted folder cover images naturally, and throttled disk-thumbnail cache trimming to avoid repeated directory scans during scrolling.
-- Validated backup preference values against each key's expected type, preventing malformed backups from storing a Boolean under a String preference.
-- Fixed pinch pointer-up anchoring, made crop handles density-aware, protected crop saves from concurrent bitmap rotation, and recycled page-export bitmaps after use.
-- Kept incoming shared comic files out of startup stale-cache cleanup so a file can survive process restoration. Added a warning when cleanup selection would remove every copy in a duplicate group.
-- Updated thumbnail binding to use the adapter-provided position rather than capturing `NO_POSITION`; renamed unused catch parameters for compatibility with the project's Kotlin toolchain.
-- Added regression coverage for macOS archive metadata filtering.
-
-### v10 verification status
-- Source checks, resource XML parsing, and ZIP integrity checks are run for this package.
-- The standalone Kotlin utility tests are run where the local compiler and required dependencies permit.
-- Full Android Gradle compilation and device testing remain unverified because Gradle 8.9 is not cached and network access is unavailable in this environment.
-
-This update focuses on correctness and memory behavior in the image pipeline, crop workflow, and backup/export handling. The changes are intentionally narrow and preserve the existing app architecture and settings format.
-
-## Changes
-
-### Page rendering and memory
-- When automatic border cropping creates a replacement bitmap, the original bitmap is now recycled immediately. When no crop is needed, the original is retained.
-- The decoded-page LRU cache is bounded to a practical 24–128 MiB range. The upper clamp also avoids `Long` to `Int` overflow on devices reporting unusually large heaps.
-- Crop-screen decoding now bounds the *longest edge* to the requested maximum. The previous two-dimension condition could leave an extremely tall or wide image full-sized when its short edge was below the limit.
-- Rotating a crop image releases the replaced bitmap after the crop view is updated.
-- Crop rectangles are clamped so they always have at least one pixel in each dimension.
-
-### Error handling and resilience
-- Backup export now reports a proper I/O failure if Android cannot open the chosen destination, instead of crashing on a nullable stream.
-- Image export similarly handles a missing output stream as an I/O error.
-- Crop loading preserves coroutine cancellation instead of swallowing it as a normal image-load failure.
-- Cover thumbnail generation catches ordinary exceptions rather than swallowing fatal VM errors such as `OutOfMemoryError`.
-
-### Thumbnail cache correctness
-- Thumbnail cache keys now include requested dimensions and archive charset. A small list cover can no longer be reused as a larger grid cover, and changing archive filename encoding no longer reuses an unrelated cached result.
-- Corrupt disk-cache images are deleted rather than decoded on every bind.
-- Thumbnail JPEGs are written to a temporary file and renamed only after a successful encode, avoiding partially written canonical cache entries after interruption.
-- Cover generation propagates coroutine cancellation and no longer swallows fatal VM errors such as `OutOfMemoryError`.
-- Disk-cache trimming runs after thumbnail writes, not only at app startup.
-
-### Decode and archive resilience
-- Bitmap sampling now treats a requested dimension of `1` as unconstrained and downsamples when either constrained dimension exceeds its target, reducing avoidable oversized decodes.
-- Image, PDF, ZIP, RAR, and 7z page sources reject out-of-range page requests with a clear `IOException` instead of leaking implementation-specific index exceptions.
-
-### Regression checks
-- Added JVM unit tests for natural numeric ordering of page filenames, very long digit runs, and case-insensitive comparison.
-- The bounded decoded-page cache, safe thumbnail tap handling, PDF thumbnail sizing, and cancellation handling remain in place.
-
-## Verification status
-
-- ZIP archive integrity and source-level checks can be run locally.
-- The latest source review covered thumbnail cache keying/publication, cancellation propagation, decode sampling, and page-index validation.
-- A full Android/Gradle build and instrumentation run have **not** been verified in this environment because the Gradle 8.9 distribution is not cached and external network access is unavailable. Run `./gradlew testDebugUnitTest assembleDebug` on a machine with Android SDK setup and network access before installing or publishing.
-- Manual device checks are still recommended for crop rotation, PDF rendering, archive navigation, backup/restore, and long-strip reading.
-
-## Overhaul v4 — spread indexing and cancellation resilience
-
-- Corrected the reader adapter's spread-mode bookkeeping: segments now always count physical source pages, while the RecyclerView item count is the ceiling of physical pages divided by two. Previously, spread mode could treat only the first half of the source pages as addressable, causing later pages to be blank or unavailable.
-- Centralized spread row/page mapping in the pure Kotlin `SpreadLayout` helper and added JVM tests for empty, odd, and even page counts plus right-to-left visual ordering and progress mapping.
-- Ensured thumbnail cover rendering rethrows coroutine cancellation instead of treating it as an ordinary unreadable-file error.
-- Hardened capped stream reads against unusual `InputStream` implementations that return zero bytes without reaching EOF, avoiding a possible busy loop.
-
-### v4 verification
-- Compiled `SpreadLayout.kt` independently with the installed Kotlin compiler.
-- Ran a standalone smoke test for spread counts and left-to-right/right-to-left page mapping successfully.
-- ZIP integrity and source checks are performed when packaging this release.
-- The complete Android Gradle build remains unverified because the required Gradle distribution cannot be downloaded in this environment.
-
-## Overhaul v5 — stale-page invalidation when trimming chapters
-
-- Fixed a cache correctness bug in continuous/long-strip reading: when appended chapters are removed and a different chapter is appended at the same absolute page indexes, previously decoded bitmaps could be reused for the new chapter.
-- Added range invalidation for pages that become unreachable. It removes cached bitmaps, learned aspect ratios, and cancels pending decodes when trimming chapters from the end.
-- Also frees cached/pending data for pages trimmed from the beginning of the strip, preventing already-read chapters from occupying the page cache unnecessarily.
-- This is a targeted correctness and memory improvement; full Android build/device verification is still required.
-- Added a post-decode coroutine cancellation check. Archive/PDF reads can be blocking, so cancellation may arrive while a decoder is inside a read; the returned bitmap is now recycled instead of being inserted back into the cache after its page range was invalidated.
-- Bumped the app source version to 1.5 (version code 6) for this maintenance package.
-
-
-## Overhaul v6 — stale decode race and resource cleanup
-
-- Added per-page cache epochs around invalidation. A blocking archive/PDF decode that finishes after its page index is invalidated cannot repopulate the cache with an obsolete bitmap, including when a later chapter reuses the same absolute index. Cache publication and invalidation are coordinated with a shared mutation lock.
-- PDF page rendering now recycles its newly allocated bitmap if native rendering fails before ownership can be returned to the caller.
-- Disk thumbnail cache hits are decoded to the dimensions requested by the current view instead of a fixed 480 × 640 target, reducing memory use for small list covers.
-- Temporary thumbnail files are removed on compression or publication failure.
-- Bumped the app source version to 1.6 (version code 7).
-
-### v6 verification
-- Source-level checks confirm the cache-epoch validation, PDF bitmap cleanup, requested-size thumbnail decoding, and temporary-file cleanup are present.
-- The pure Kotlin spread-layout and natural-order utilities are compiled and smoke-tested independently.
-- Full Android/Gradle compilation and device testing remain unverified because the Gradle 8.9 distribution is unavailable offline in this environment.
-
-
-## Overhaul v7 (version 1.7, version code 8)
-
-### New reader features
-- Bookmarks now support optional notes (up to 500 characters), useful for quotes, reveals, or remembering why a page matters.
-- Bookmark entries display their notes and offer actions to jump to the page, edit the note, or remove the bookmark.
-- Clearing a chapter's bookmarks now asks for confirmation to reduce accidental data loss.
-- History and bookmark bulk-clears now use the library read-modify-write lock, preventing concurrent updates from being lost.
-- Notes remain in the existing bookmark data model and therefore continue to be included in the existing backup/restore flow.
-
-### Regression coverage
-- Expanded natural-order tests for leading-zero numeric runs, mixed chapter/page numbers, and prefix ordering.
-
-### Verification status
-- ZIP integrity and resource XML well-formedness checked locally.
-- Gradle test/build could not run because the wrapper distribution (Gradle 8.9) is not cached and network access is unavailable in this environment.
-- Android runtime/device behavior remains unverified.
-
-
-## Overhaul v8 (version 1.8, version code 9)
-
-### New features
-- Added configurable daily reading goals for pages and minutes, with progress percentages in Reading Statistics. Either target can be disabled by setting it to zero. Goal settings survive a statistics reset.
-- Added a persistent **Show unread only** library filter. It hides read files while keeping folders visible so users can continue navigating into series.
-- Added **Recently read** as a library sort option, based on saved reading-history timestamps.
-
-### Daily tracking behavior
-- Reading sessions increment aggregate totals and a date-scoped daily counter. The daily counter resets lazily on the first saved session of a new local day.
-- Goal progress is clamped to 100% for display while retaining actual totals internally.
-
-### Verification
-- Resource XML parsing and ZIP integrity checks are run for this package.
-- The Gradle test/build command was attempted, but the wrapper could not download Gradle 8.9 because `services.gradle.org` is unreachable in this environment. Full Android compilation and device testing remain unverified.
-
-## Overhaul v9 (version 1.9, version code 10)
-
-### Reading dashboard and sharing
-- Added a rolling 365-day per-date activity log for pages and seconds read. The dashboard and Settings statistics view now show the last seven calendar days, including zero-activity days, making trends visible rather than only showing lifetime totals.
-- The activity log is an additive migration. On the first new session after upgrading, existing same-day counters are used as the starting point so today's earlier progress is not lost. Historical days from before this feature cannot be reconstructed from the previous aggregate-only format and display as zero.
-- Added **Share reading report**, which exports lifetime totals, recent daily activity, streaks, and configured daily goal progress through Android's share sheet.
-- Added **Share bookmarks and notes** in the Bookmarks tab. It creates a plain-text list of bookmarked pages, notes, and source paths without requiring storage permissions.
-
-### Additional maintenance
-- Removed a redundant duplicate history write in deleted-path cleanup.
-- Bumped the app version to 1.9 (version code 10).
-
-### v9 verification
-- Resource XML files parse successfully.
-- Standalone Kotlin smoke tests for spread mapping and natural filename ordering passed.
-- ZIP integrity is checked after packaging.
-- Full Android Gradle compilation remains unverified because the Gradle 8.9 distribution cannot be downloaded in this network-restricted environment. Share-sheet behavior and on-device activity tracking still need device testing.
-
-
-## v2.1 / Overhaul v11
-
-- Added opt-in/out Material You dynamic colors. On Android 12+, the app can use the user's wallpaper-derived palette; older Android versions retain the bundled Material 3 fallback palette. Dynamic colors are enabled by default and can be changed under Settings → Appearance.
-- Added **Pick a random unread comic** to the library menu. It chooses from the current visible listing and safely reports when no unread comic is available.
-- Refined Material 3 visual rhythm with rounder cards and clearer tab indicator/ripple treatment.
-- Bumped app version to 2.1 (version code 12).
-- Verification performed for this pass: XML parsing, resource-reference checks, and ZIP integrity. A complete Gradle Android build and device testing remain unverified in this environment.
-
-## v12 / CI automation additions
-
-- Added `.github/workflows/android-build-release.yml` to run unit tests, lint, and build debug plus optimized release APKs on GitHub Actions.
-- Workflow uploads named APKs and SHA-256 checksums as build artifacts; version tags (`v*`) publish those assets to GitHub Releases.
-- CI generates a temporary debug keystore and signs the release variant with it, as requested. This is explicitly documented as testing-only because the debug credentials are public and the key is regenerated for each run.
-- Added `docs/CI_RELEASES.md` and README instructions for artifacts, tag-based publishing, and signing limitations.
-- Full build verification must happen on GitHub Actions; this local environment may not have network access to download Gradle and Android dependencies.
-
-## v2.2 — merged review fixes and stable signing
-
-- Library JSON (history, bookmarks, favourites, read marks) is parsed once per change instead of on every call.
-- Zip page-size lookups read only the image header. Rar/7z decode outside the archive lock.
-- Swiping back past the first page opens the previous chapter on its last page.
-- Taps are instant (no double-tap delay) when double-tap zoom is off.
-- PDF pages are limited to 16 million pixels. Covers show a thin reading-progress bar.
-- CI signs debug and release APKs with one stable key from repository secrets (docs/SIGNING.md). Tag builds fail without the secrets.
-- Not compiled or run in the authoring environment; the first CI run is the build check.
-
-## v2.3
-
-- Swiping backwards from the first page (any reading mode) opens the previous chapter on its last page; in vertical and long-strip modes it sits at the very bottom of that page.
-- Every submenu in the reader's 3-dots menu (Display, Page filter, Reading, Page actions) starts with a "Back" item that returns to the main list.
+- Prevented incoming `open with` intents from being replayed during activity recreation, and serialized directory/favorites/history/bookmark listing jobs so stale results cannot overwrite newer tabs.
+- Made history sorting recency-first regardless of the generic library sort preference.
+- Filtered macOS `__MACOSX` and `._*` resource-fork entries from comic archives, sorted folder cover images naturally, and throttled disk-thumbnail cache trimming.
+- Validated backup preference values against each key's expected type.

@@ -2,6 +2,7 @@ package com.infinity.comicreader.ui
 
 import android.content.Context
 import android.graphics.Matrix
+import android.graphics.PointF
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.GestureDetector
@@ -10,35 +11,42 @@ import android.view.ScaleGestureDetector
 import android.view.ViewConfiguration
 import androidx.appcompat.widget.AppCompatImageView
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 /**
- * Image view with pinch-to-zoom, panning, double-tap zoom and configurable fit modes.
- * Uses [ScaleType.MATRIX] and manipulates the image matrix directly.
+ * Pinch-to-zoom, double-tap-to-zoom, pan-when-zoomed image view.
  *
- * [onTap] receives the tap position as a fraction of the view width so callers can
- * implement left/centre/right tap zones. [onVerticalDrag] receives the vertical
- * delta of a drag while the image is not zoomed (used for the brightness gesture).
+ * When the image is at its resting fit scale, horizontal (or vertical) drags are handed
+ * over to the parent [androidx.viewpager2.widget.ViewPager2] or [androidx.recyclerview.widget.RecyclerView]
+ * so normal page turns work seamlessly.
  */
 class ZoomImageView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyle: Int = 0
-) : AppCompatImageView(context, attrs, defStyle) {
+    defStyleAttr: Int = 0
+) : AppCompatImageView(context, attrs, defStyleAttr) {
 
-    enum class FitMode { SCREEN, WIDTH, HEIGHT, STRETCH }
+    enum class FitMode { WIDTH, HEIGHT, SCREEN, STRETCH }
 
     private val matrix = Matrix()
-    private val baseMatrix = Matrix()
-    private var fitMode = FitMode.SCREEN
+    private val matrixValues = FloatArray(9)
+
+    private var fitMode: FitMode = FitMode.SCREEN
     private var minScale = 1f
+    private var maxScale = 5f
     private var currentScale = 1f
-    private var maxScale = 8f
+
     private var lastX = 0f
     private var lastY = 0f
-    private val values = FloatArray(9)
+    private var dragging = false
 
+    /** Single-tap listener: receives the tap's horizontal position as a 0..1 fraction. */
     var onTap: ((Float) -> Unit)? = null
-    var onVerticalDrag: ((Float) -> Unit)? = null
+
+    /** Vertical drag on the left third of the view (used for the brightness gesture). */
+    var onLeftVerticalDrag: ((Float) -> Unit)? = null
+
     var doubleTapEnabled = true
 
     /** True when the image is currently zoomed in beyond its base fit scale. */
@@ -53,12 +61,12 @@ class ZoomImageView @JvmOverloads constructor(
         context,
         object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
-                if (drawable == null) return false
-                val newScale = (currentScale * detector.scaleFactor).coerceIn(minScale, maxScale)
-                val factor = newScale / currentScale
-                currentScale = newScale
-                matrix.postScale(factor, factor, detector.focusX, detector.focusY)
-                clamp()
+                val factor = detector.scaleFactor
+                val target = (currentScale * factor).coerceIn(minScale, maxScale)
+                val real = target / currentScale
+                matrix.postScale(real, real, detector.focusX, detector.focusY)
+                currentScale = target
+                constrainMatrix()
                 imageMatrix = matrix
                 return true
             }
@@ -70,32 +78,34 @@ class ZoomImageView @JvmOverloads constructor(
         object : GestureDetector.SimpleOnGestureListener() {
             override fun onDown(e: MotionEvent): Boolean = true
 
-            // With double-tap zoom off there is nothing to wait for, so react on the tap
-            // itself instead of after the ~300 ms double-tap window.
             override fun onSingleTapUp(e: MotionEvent): Boolean {
-                if (doubleTapEnabled) return false
-                dispatchTap(e)
-                return true
+                // With double-tap zoom off there is no second tap to wait for: act at once.
+                if (!doubleTapEnabled) {
+                    dispatchTap(e)
+                    return true
+                }
+                return false
             }
 
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                if (!doubleTapEnabled) return false
-                dispatchTap(e)
+                if (doubleTapEnabled) dispatchTap(e)
                 return true
             }
 
-            // A quick second tap is classified as a double-tap; with zoom off it is just a tap.
             override fun onDoubleTapEvent(e: MotionEvent): Boolean {
-                if (doubleTapEnabled) return false
-                when (e.actionMasked) {
-                    MotionEvent.ACTION_DOWN -> {
-                        tapDownX = e.x
-                        tapDownY = e.y
+                // When double-tap zoom is off, each tap in a rapid pair is just a tap.
+                if (!doubleTapEnabled) {
+                    when (e.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            tapDownX = e.x
+                            tapDownY = e.y
+                        }
+                        MotionEvent.ACTION_UP ->
+                            if (abs(e.x - tapDownX) <= tapSlop && abs(e.y - tapDownY) <= tapSlop) dispatchTap(e)
                     }
-                    MotionEvent.ACTION_UP ->
-                        if (abs(e.x - tapDownX) <= tapSlop && abs(e.y - tapDownY) <= tapSlop) dispatchTap(e)
+                    return true
                 }
-                return true
+                return false
             }
 
             override fun onDoubleTap(e: MotionEvent): Boolean {
@@ -111,13 +121,16 @@ class ZoomImageView @JvmOverloads constructor(
     )
 
     private fun dispatchTap(e: MotionEvent) {
-        performClick()
-        val fraction = if (width > 0) e.x / width.toFloat() else 0.5f
-        onTap?.invoke(fraction)
+        if (width > 0) onTap?.invoke((e.x / width).coerceIn(0f, 1f))
     }
 
     init {
         scaleType = ScaleType.MATRIX
+    }
+
+    fun setFitMode(mode: FitMode) {
+        fitMode = mode
+        fit(mode)
     }
 
     override fun setImageDrawable(drawable: Drawable?) {
@@ -132,27 +145,20 @@ class ZoomImageView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        fit(fitMode)
-    }
-
-    fun setFitMode(mode: FitMode) {
-        fitMode = mode
-        fit(mode)
+        if (w != oldw || h != oldh) fit(fitMode)
     }
 
     fun fit(mode: FitMode = fitMode) {
-        val drawable = drawable ?: return
+        val d: Drawable = drawable ?: return
         val viewW = width.toFloat()
         val viewH = height.toFloat()
-        if (viewW <= 0f || viewH <= 0f) return
-        val drawableW = drawable.intrinsicWidth.toFloat()
-        val drawableH = drawable.intrinsicHeight.toFloat()
-        if (drawableW <= 0f || drawableH <= 0f) return
+        val drawableW = d.intrinsicWidth.toFloat()
+        val drawableH = d.intrinsicHeight.toFloat()
+        if (viewW <= 0 || viewH <= 0 || drawableW <= 0 || drawableH <= 0) return
 
+        matrix.reset()
         if (mode == FitMode.STRETCH) {
-            baseMatrix.reset()
-            baseMatrix.postScale(viewW / drawableW, viewH / drawableH)
-            matrix.set(baseMatrix)
+            matrix.postScale(viewW / drawableW, viewH / drawableH)
             currentScale = 1f
             minScale = 1f
             maxScale = 8f
@@ -160,93 +166,97 @@ class ZoomImageView @JvmOverloads constructor(
             return
         }
 
+        val scaleX = viewW / drawableW
+        val scaleY = viewH / drawableH
         val scale = when (mode) {
-            FitMode.WIDTH -> viewW / drawableW
-            FitMode.HEIGHT -> viewH / drawableH
-            else -> minOf(viewW / drawableW, viewH / drawableH)
+            FitMode.WIDTH -> scaleX
+            FitMode.HEIGHT -> scaleY
+            FitMode.SCREEN -> min(scaleX, scaleY)
+            FitMode.STRETCH -> scaleX
         }
-        baseMatrix.reset()
-        baseMatrix.postScale(scale, scale)
+        minScale = scale
+        maxScale = max(scale * 5f, 5f)
+        currentScale = scale
+
         val scaledW = drawableW * scale
         val scaledH = drawableH * scale
         val startX = if (scaledW > viewW) 0f else (viewW - scaledW) / 2f
         val startY = if (scaledH > viewH) 0f else (viewH - scaledH) / 2f
-        baseMatrix.postTranslate(startX, startY)
-        matrix.set(baseMatrix)
-        currentScale = scale
-        minScale = scale
-        maxScale = scale * 8f
+
+        matrix.postScale(scale, scale)
+        matrix.postTranslate(startX, startY)
         imageMatrix = matrix
     }
 
     private fun zoomTo(target: Float, focusX: Float, focusY: Float) {
         val clamped = target.coerceIn(minScale, maxScale)
         val factor = clamped / currentScale
-        currentScale = clamped
         matrix.postScale(factor, factor, focusX, focusY)
-        clamp()
+        currentScale = clamped
+        constrainMatrix()
         imageMatrix = matrix
     }
 
-    private fun clamp() {
-        matrix.getValues(values)
-        val transX = values[Matrix.MTRANS_X]
-        val transY = values[Matrix.MTRANS_Y]
-        val scaleX = values[Matrix.MSCALE_X]
-        val scaleY = values[Matrix.MSCALE_Y]
-        val drawable = drawable ?: return
-        val drawableW = drawable.intrinsicWidth * scaleX
-        val drawableH = drawable.intrinsicHeight * scaleY
+    private fun constrainMatrix() {
+        val d = drawable ?: return
         val viewW = width.toFloat()
         val viewH = height.toFloat()
+        val trans = currentTranslation()
+        val contentW = d.intrinsicWidth * currentScaleX()
+        val contentH = d.intrinsicHeight * currentScaleY()
 
-        var dx = 0f
-        if (drawableW <= viewW) {
-            dx = (viewW - drawableW) / 2f - transX
-        } else {
-            val minX = viewW - drawableW
-            if (transX > 0f) dx = -transX else if (transX < minX) dx = minX - transX
-        }
-
-        var dy = 0f
-        if (drawableH <= viewH) {
-            dy = (viewH - drawableH) / 2f - transY
-        } else {
-            val minY = viewH - drawableH
-            if (transY > 0f) dy = -transY else if (transY < minY) dy = minY - transY
-        }
-        matrix.postTranslate(dx, dy)
+        val dx = clampAxis(trans.x, viewW, contentW)
+        val dy = clampAxis(trans.y, viewH, contentH)
+        if (dx != 0f || dy != 0f) matrix.postTranslate(dx, dy)
     }
 
-    override fun performClick(): Boolean {
-        super.performClick()
-        return true
+    private fun clampAxis(trans: Float, viewSize: Float, contentSize: Float): Float {
+        if (contentSize <= viewSize) {
+            return (viewSize - contentSize) / 2f - trans
+        }
+        if (trans > 0f) return -trans
+        if (trans + contentSize < viewSize) return viewSize - (trans + contentSize)
+        return 0f
+    }
+
+    private fun currentTranslation(): PointF {
+        matrix.getValues(matrixValues)
+        return PointF(matrixValues[Matrix.MTRANS_X], matrixValues[Matrix.MTRANS_Y])
+    }
+
+    private fun currentScaleX(): Float {
+        matrix.getValues(matrixValues)
+        return matrixValues[Matrix.MSCALE_X]
+    }
+
+    private fun currentScaleY(): Float {
+        matrix.getValues(matrixValues)
+        return matrixValues[Matrix.MSCALE_Y]
     }
 
     private fun roomX(dx: Float): Boolean {
         val d = drawable ?: return false
-        matrix.getValues(values)
-        val contentW = d.intrinsicWidth * values[Matrix.MSCALE_X]
-        if (contentW <= width + EDGE_SLOP) return false
-        val tx = values[Matrix.MTRANS_X]
-        return if (dx > 0) tx < -EDGE_SLOP else tx > width - contentW + EDGE_SLOP
+        val contentW = d.intrinsicWidth * currentScaleX()
+        if (contentW <= width + 1f) return false
+        val tx = currentTranslation().x
+        return (dx > 0 && tx < -1f) || (dx < 0 && tx + contentW > width + 1f)
     }
 
     private fun roomY(dy: Float): Boolean {
         val d = drawable ?: return false
-        matrix.getValues(values)
-        val contentH = d.intrinsicHeight * values[Matrix.MSCALE_Y]
-        if (contentH <= height + EDGE_SLOP) return false
-        val ty = values[Matrix.MTRANS_Y]
-        return if (dy > 0) ty < -EDGE_SLOP else ty > height - contentH + EDGE_SLOP
+        val contentH = d.intrinsicHeight * currentScaleY()
+        if (contentH <= height + 1f) return false
+        val ty = currentTranslation().y
+        return (dy > 0 && ty < -1f) || (dy < 0 && ty + contentH > height + 1f)
     }
 
     private fun canPan(): Boolean {
         val d = drawable ?: return false
-        matrix.getValues(values)
-        return d.intrinsicWidth * values[Matrix.MSCALE_X] > width + EDGE_SLOP ||
-            d.intrinsicHeight * values[Matrix.MSCALE_Y] > height + EDGE_SLOP
+        return d.intrinsicWidth * currentScaleX() > width + 2f ||
+            d.intrinsicHeight * currentScaleY() > height + 2f
     }
+
+    private var leftDragActive = false
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         scaleDetector.onTouchEvent(event)
@@ -256,6 +266,8 @@ class ZoomImageView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 lastX = event.x
                 lastY = event.y
+                dragging = false
+                leftDragActive = onLeftVerticalDrag != null && !canPan() && event.x < width * 0.2f
                 parent?.requestDisallowInterceptTouchEvent(canPan())
             }
             MotionEvent.ACTION_MOVE -> handleMove(event)
@@ -265,38 +277,38 @@ class ZoomImageView @JvmOverloads constructor(
                     lastX = event.getX(index)
                     lastY = event.getY(index)
                 }
-                parent?.requestDisallowInterceptTouchEvent(scaleDetector.isInProgress || canPan())
+                dragging = false
+                leftDragActive = false
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                dragging = false
+                leftDragActive = false
                 parent?.requestDisallowInterceptTouchEvent(false)
+            }
         }
         return true
     }
 
     private fun handleMove(event: MotionEvent) {
-        if (scaleDetector.isInProgress) {
-            parent?.requestDisallowInterceptTouchEvent(true)
-        } else if (event.pointerCount == 1) {
+        if (scaleDetector.isInProgress) return
+        if (event.pointerCount == 1) {
             val dx = event.x - lastX
             val dy = event.y - lastY
             if (canPan()) {
                 val horizontal = abs(dx) >= abs(dy)
                 val room = if (horizontal) roomX(dx) else roomY(dy)
                 parent?.requestDisallowInterceptTouchEvent(room)
-                if (room) {
-                    matrix.postTranslate(if (roomX(dx)) dx else 0f, if (roomY(dy)) dy else 0f)
-                    clamp()
-                    imageMatrix = matrix
-                }
-            } else {
-                onVerticalDrag?.invoke(dy)
+                matrix.postTranslate(dx, dy)
+                constrainMatrix()
+                imageMatrix = matrix
+            } else if (leftDragActive && abs(dy) > abs(dx) * 1.5f && abs(dy) > 6f) {
+                parent?.requestDisallowInterceptTouchEvent(true)
+                onLeftVerticalDrag?.invoke(-dy / height.coerceAtLeast(1))
+            } else if (abs(dx) > 8f || abs(dy) > 8f) {
+                parent?.requestDisallowInterceptTouchEvent(false)
             }
+            lastX = event.x
+            lastY = event.y
         }
-        lastX = event.x
-        lastY = event.y
-    }
-
-    private companion object {
-        const val EDGE_SLOP = 2f
     }
 }

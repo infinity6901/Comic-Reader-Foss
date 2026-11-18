@@ -44,14 +44,8 @@ class PdfSource(file: File) : PageSource {
                     fromHeight > 0 -> fromHeight
                     else -> page.width * 2
                 }
-                var w = wanted.coerceIn(1, MAX_WIDTH)
-                var h = (w * ratio).toInt().coerceIn(1, MAX_HEIGHT)
-                // A tall page at full width could still be ~96 MB; keep the bitmap bounded.
-                if (w.toLong() * h > MAX_PIXELS) {
-                    val shrink = Math.sqrt(MAX_PIXELS.toDouble() / (w.toLong() * h))
-                    w = (w * shrink).toInt().coerceAtLeast(1)
-                    h = (h * shrink).toInt().coerceAtLeast(1)
-                }
+                val w = wanted.coerceIn(1, MAX_WIDTH)
+                val h = (w * ratio).toInt().coerceIn(1, MAX_HEIGHT)
                 val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                 try {
                     bitmap.eraseColor(Color.WHITE)
@@ -95,6 +89,5 @@ class PdfSource(file: File) : PageSource {
         private const val TAG = "PdfSource"
         private const val MAX_WIDTH = 3000
         private const val MAX_HEIGHT = 8000
-        private const val MAX_PIXELS = 16_000_000L
     }
 }

@@ -36,21 +36,17 @@ class RarSource(file: File) : PageSource {
 
     override val pageCount: Int get() = headers.size
 
-    /**
-     * junrar's [Archive] is not thread-safe; only the sequential extraction needs the lock
-     * while pixel decoding runs outside it.
-     */
+    @Synchronized
     override fun loadPage(index: Int, reqWidth: Int, reqHeight: Int): Bitmap {
+        if (closed) throw IOException("Archive is closed")
         if (headers.isEmpty()) throw IOException("Archive contains no images")
         if (index !in headers.indices) throw IOException("Page index out of range: $index")
         val header = headers[index]
         try {
-            val bytes = synchronized(this) {
-                if (closed) throw IOException("Archive is closed")
-                archive.getInputStream(header).use { BitmapUtils.readBytes(it) }
+            archive.getInputStream(header).use { input ->
+                return BitmapUtils.decodeStream(input, reqWidth, reqHeight)
+                    ?: throw IOException("Could not decode ${header.fileName}")
             }
-            return BitmapUtils.decodeBytes(bytes, reqWidth, reqHeight)
-                ?: throw IOException("Could not decode ${header.fileName}")
         } catch (t: Throwable) {
             Log.w(TAG, "Failed to load rar entry ${header.fileName} (index $index)", t)
             throw t

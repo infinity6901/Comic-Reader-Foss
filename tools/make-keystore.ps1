@@ -1,5 +1,4 @@
 # Creates the stable signing key used by CI. Keep the resulting file and passwords safe.
-if (Test-Path "comicreader-release.jks") { Remove-Item "comicreader-release.jks" -Force }
 keytool -genkeypair -v -keystore comicreader-release.jks -alias comicreader `
   -keyalg RSA -keysize 4096 -validity 36500
 $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("comicreader-release.jks"))

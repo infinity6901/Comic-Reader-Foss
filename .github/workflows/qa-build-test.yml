@@ -12,11 +12,7 @@ name: QA - Build, Test & Release
 #
 # Artifacts (each uploaded separately, even when a job fails):
 #   unit-test-reports | lint-reports | build-logs | comicreader-debug-apk-<ver> | comicreader-release-apk-<ver> |
-#   release-build-logs | instrumented-test-reports | device-test-logs | device-logcat | qa-report | failure-report
-#
-# Signing (optional for CI, REQUIRED for publishing): supports both repo secret conventions:
-#   - KEYSTORE_BASE64, KEY_ALIAS, KEY_PASSWORD, KEYSTORE_PASSWORD (see docs/SIGNING.md)
-#   - SIGN_KEY, ALIAS, KEY_PASSWORD, KEY_STORE_PASSWORD
+#   release-build-logs | device-test-logs | device-logcat | qa-report | failure-report
 
 on:
   workflow_dispatch:
@@ -143,8 +139,6 @@ jobs:
 
       - uses: ./.github/actions/setup-android-build
 
-      # Optional here: with the keystore the debug APK is signed with the same key as every other build
-      # (installable over them); without it Gradle falls back to the Android debug key.
       - name: Decode keystore (if secrets are available)
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -211,8 +205,8 @@ jobs:
           mkdir -p manifests
           MM=$(find app/build -path '*merged_manifest*' -name AndroidManifest.xml | grep -i debug | head -n1 || true)
           REPORT=$(find app/build -name 'manifest-merger-*debug*-report.txt' | head -n1 || true)
-          [ -n "$MM" ] && cp "$MM" manifests/AndroidManifest.merged.xml
-          [ -n "$REPORT" ] && cp "$REPORT" manifests/manifest-merger-report.txt
+          if [ -n "$MM" ]; then cp "$MM" manifests/AndroidManifest.merged.xml; fi
+          if [ -n "$REPORT" ]; then cp "$REPORT" manifests/manifest-merger-report.txt; fi
           ci_step manifest-content "Merged manifest is well-formed and declares ListActivity and ViewerActivity" python3 - <<'PY'
           import sys, xml.etree.ElementTree as ET
           p = "manifests/AndroidManifest.merged.xml"
@@ -263,19 +257,23 @@ jobs:
           source .github/scripts/ci-step.sh
           ci_step unit-tests "Unit tests (:app:testDebugUnitTest)" \
             ./gradlew :app:testDebugUnitTest --continue --no-build-cache --stacktrace
+          mkdir -p app/build/reports/tests
+          cp ci-logs/unit-tests.log app/build/reports/tests/unit-tests-output.log || true
 
       - name: "1.3 Android Lint"
         run: |
           source .github/scripts/ci-step.sh
           ci_step lint "Android Lint (:app:lintDebug)" \
             ./gradlew :app:lintDebug --continue --stacktrace
+          mkdir -p app/build/reports
+          cp ci-logs/lint.log app/build/reports/lint-results-console.log || true
 
       - name: "1.3 Static review hints (heuristic, informational)"
-        if: ${{ !cancelled() }}
+        if: ${{ always() && !cancelled() }}
         run: bash .github/scripts/static-review.sh static-review
 
       - name: Upload unit test reports
-        if: ${{ !cancelled() }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-reports
@@ -286,7 +284,7 @@ jobs:
           retention-days: 30
 
       - name: Upload lint reports
-        if: ${{ !cancelled() }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: lint-reports
@@ -296,7 +294,7 @@ jobs:
           retention-days: 30
 
       - name: Upload build logs
-        if: ${{ !cancelled() }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: build-logs
@@ -310,7 +308,7 @@ jobs:
           retention-days: 30
 
       - name: Upload debug APK
-        if: ${{ !cancelled() && steps.collect.outputs.apk_built == 'true' }}
+        if: ${{ always() && !cancelled() && steps.collect.outputs.apk_built == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: comicreader-debug-apk-${{ needs.plan.outputs.version_name }}
@@ -319,7 +317,7 @@ jobs:
           retention-days: 30
 
       - name: Enforce Gate 1
-        if: ${{ !cancelled() }}
+        if: ${{ always() && !cancelled() }}
         run: |
           FAIL=0
           ls ci-status/*.tsv > /dev/null 2>&1 || { echo "::error::No check results were recorded"; exit 1; }
@@ -406,7 +404,7 @@ jobs:
           find app/build/outputs/mapping -type f -exec cp {} release-extras/ \; 2>/dev/null || true
 
       - name: Upload release APK
-        if: ${{ !cancelled() }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: comicreader-release-apk-${{ needs.plan.outputs.version_name }}
@@ -415,7 +413,7 @@ jobs:
           retention-days: 30
 
       - name: Upload release build logs (+ R8 mapping)
-        if: ${{ !cancelled() }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: release-build-logs
@@ -427,7 +425,7 @@ jobs:
           retention-days: 30
 
       - name: Fail if the release build failed
-        if: ${{ !cancelled() }}
+        if: ${{ always() && !cancelled() }}
         run: |
           FAIL=0
           for f in ci-status/*.tsv; do
@@ -441,7 +439,7 @@ jobs:
   device-tests:
     name: "Stage 2: emulator checks"
     needs: [plan, verify]
-    if: ${{ !cancelled() && needs.plan.outputs.run_device == 'true' && needs.verify.outputs.apk_built == 'true' }}
+    if: ${{ always() && !cancelled() && needs.plan.outputs.run_device == 'true' && needs.verify.outputs.apk_built == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -476,7 +474,7 @@ jobs:
           script: bash .github/scripts/device-tests.sh apks/comicreader-debug-${{ needs.plan.outputs.version_name }}.apk device-out ${{ needs.plan.outputs.cycles }}
 
       - name: Upload logcat and final screen
-        if: ${{ !cancelled() }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: device-logcat
@@ -488,7 +486,7 @@ jobs:
           retention-days: 30
 
       - name: Upload device test logs
-        if: ${{ !cancelled() }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: device-test-logs
@@ -502,7 +500,7 @@ jobs:
           retention-days: 30
 
       - name: Enforce emulator checks
-        if: ${{ !cancelled() }}
+        if: ${{ always() && !cancelled() }}
         run: |
           FAIL=0
           for f in device-out/ci-status/*.tsv; do
@@ -516,7 +514,7 @@ jobs:
   report:
     name: QA + failure report
     needs: [plan, verify, build-release, device-tests]
-    if: ${{ !cancelled() }}
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -524,6 +522,7 @@ jobs:
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           path: artifacts
 
@@ -533,6 +532,7 @@ jobs:
           STRICT_LINT: ${{ needs.plan.outputs.strict_lint }}
           JOB_RESULTS: ${{ toJSON(needs) }}
         run: |
+          mkdir -p artifacts
           python3 .github/scripts/qa_report.py artifacts report-out
           mkdir -p qa-report failure-report
           cp report-out/qa-report.md qa-report/
@@ -540,6 +540,7 @@ jobs:
           { cat report-out/qa-report.md; echo; echo '---'; echo; cat report-out/failure-report.md; } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload QA report
+        if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: qa-report
@@ -547,6 +548,7 @@ jobs:
           retention-days: 90
 
       - name: Upload failure report
+        if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: failure-report
@@ -558,7 +560,7 @@ jobs:
     name: Publish GitHub Release
     needs: [plan, verify, build-release, device-tests, report]
     if: >-
-      ${{ !cancelled()
+      ${{ always() && !cancelled()
           && needs.plan.outputs.publish == 'true'
           && needs.verify.result == 'success'
           && needs.build-release.result == 'success'

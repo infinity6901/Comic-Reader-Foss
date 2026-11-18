@@ -22,7 +22,6 @@ adb shell input keyevent 82 || true
 adb shell wm dismiss-keyguard || true
 adb logcat -c || true
 
-# Determine package name from the APK
 BUILD_TOOLS_DIR=$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n1 || true)
 PKG="com.infinity.comicreader"
 if [ -n "$BUILD_TOOLS_DIR" ] && [ -x "$BUILD_TOOLS_DIR/aapt" ]; then
@@ -32,11 +31,9 @@ fi
 MAIN_ACTIVITY="$PKG/com.infinity.comicreader.ui.ListActivity"
 echo "Target package: $PKG | Main activity: $MAIN_ACTIVITY"
 
-# 1. Install Debug APK
 ci_step install "Install debug APK ($APK)" adb install -r -g "$APK"
 adb shell appops set "$PKG" MANAGE_EXTERNAL_STORAGE allow 2>/dev/null || true
 
-# 2. Cold Launch
 launch_check() {
   adb shell am start -W -n "$MAIN_ACTIVITY"
   sleep 2
@@ -50,24 +47,20 @@ launch_check() {
 }
 ci_step cold-launch "Cold launch ListActivity and verify live process" launch_check
 
-# 3. Lifecycle Cycles (background/foreground, rotation, lock/unlock)
 lifecycle_check() {
   adb shell settings put system accelerometer_rotation 0 || true
   for i in $(seq 1 "$CYCLES"); do
     echo "--- Lifecycle cycle $i / $CYCLES ---"
-    # Background & foreground
     adb shell input keyevent KEYCODE_HOME
     sleep 1
     adb shell am start -W -n "$MAIN_ACTIVITY" >/dev/null
     sleep 1
 
-    # Rotate landscape -> portrait
     adb shell settings put system user_rotation 1 || true
     sleep 1
     adb shell settings put system user_rotation 0 || true
     sleep 1
 
-    # Lock & unlock
     adb shell input keyevent KEYCODE_SLEEP || true
     sleep 1
     adb shell input keyevent KEYCODE_WAKEUP || true
@@ -84,7 +77,6 @@ lifecycle_check() {
 }
 ci_step lifecycle-cycles "Background/foreground, rotation, and lock/unlock ($CYCLES cycles)" lifecycle_check
 
-# 4. Process restart
 restart_check() {
   adb shell am force-stop "$PKG"
   sleep 1
@@ -100,11 +92,9 @@ restart_check() {
 }
 ci_step process-restart "Force-stop and cold relaunch recovery" restart_check
 
-# 5. Capture final screenshot and logcat
 adb exec-out screencap -p > "$OUT_DIR/final-screen.png" 2>/dev/null || true
 adb logcat -d > "$OUT_DIR/comicreader-logcat.txt" 2>/dev/null || true
 
-# 6. Crash / ANR inspection
 crash_check() {
   grep -E "FATAL EXCEPTION|ANR in $PKG" "$OUT_DIR/comicreader-logcat.txt" > "$OUT_DIR/logcat-crash.txt" || true
   if [ -s "$OUT_DIR/logcat-crash.txt" ]; then

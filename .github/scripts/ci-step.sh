@@ -12,7 +12,6 @@ ci_record() {
   local desc="$3"
   local rc="${4:-0}"
   mkdir -p "$CI_STATUS_DIR"
-  # Sanitize tabs/newlines in description
   local clean_desc
   clean_desc=$(printf '%s' "$desc" | tr '\t\r\n' '   ')
   printf '%s\t%s\t%s\t%s\n' "$id" "$status" "$rc" "$clean_desc" > "$CI_STATUS_DIR/$id.tsv"

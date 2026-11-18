@@ -19,7 +19,6 @@ class SpreadLayoutTest {
 
     @Test
     fun coverSoloSpreadPairing() {
-        // Pages: [0], [1, 2], [3, 4] -> 3 spread items for 5 pages
         assertEquals(3, SpreadLayout.itemCount(5, coverSolo = true))
         assertEquals(0, SpreadLayout.firstPage(0, rtl = false, coverSolo = true))
         assertEquals(SpreadLayout.NO_PAGE, SpreadLayout.secondPage(0, rtl = false, coverSolo = true))

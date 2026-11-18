@@ -44,21 +44,17 @@ class SevenZipSource(file: File) : PageSource {
 
     override val pageCount: Int get() = entries.size
 
-    /**
-     * [SevenZFile] keeps decode state on the instance and is not thread-safe: only the
-     * extraction holds the lock while pixel decoding runs outside it.
-     */
+    @Synchronized
     override fun loadPage(index: Int, reqWidth: Int, reqHeight: Int): Bitmap {
+        if (closed) throw IOException("Archive is closed")
         if (entries.isEmpty()) throw IOException("Archive contains no images")
         if (index !in entries.indices) throw IOException("Page index out of range: $index")
         val entry = entries[index]
         try {
-            val bytes = synchronized(this) {
-                if (closed) throw IOException("Archive is closed")
-                sz.getInputStream(entry).use { BitmapUtils.readBytes(it) }
+            sz.getInputStream(entry).use { input ->
+                return BitmapUtils.decodeStream(input, reqWidth, reqHeight)
+                    ?: throw IOException("Could not decode ${entry.name}")
             }
-            return BitmapUtils.decodeBytes(bytes, reqWidth, reqHeight)
-                ?: throw IOException("Could not decode ${entry.name}")
         } catch (t: Throwable) {
             Log.w(TAG, "Failed to load 7z entry ${entry.name} (index $index)", t)
             throw t
